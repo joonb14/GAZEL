@@ -9,7 +9,6 @@ $git lfs install
 Git LFS initialized.
 $ git clone https://github.com/joonb14/MobiGaze.git
 </code></pre>
-<br>
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java</b> and <b>FaceGraphic.java</b> <br>
 Also deleted most of the source code that is not needed<br>
