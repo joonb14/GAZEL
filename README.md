@@ -6,6 +6,6 @@ I mainly changed <b>FaceDetectorProcessor.java</b> and <b>FaceGraphic.java</b> <
 Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
-// TODO
+stored in asset folder. Created with Keras, converted to tflite.<br>
 
 
