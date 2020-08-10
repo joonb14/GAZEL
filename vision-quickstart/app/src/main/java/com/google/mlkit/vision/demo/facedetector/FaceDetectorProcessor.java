@@ -24,6 +24,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.demo.GraphicOverlay;
 import com.google.mlkit.vision.demo.VisionProcessorBase;
@@ -54,11 +55,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 
     private float yhatX =0, yhatY=0;
 
-    public FaceDetectorProcessor(Context context, FaceDetectorOptions options, Interpreter interpreter) {
+    //public FaceDetectorProcessor(Context context, FaceDetectorOptions options, Interpreter interpreter) {
+    public FaceDetectorProcessor(Context context, FaceDetectorOptions options) {
         super(context);
         Log.v(MANUAL_TESTING_LOG, "Face detector options: " + options);
         detector = FaceDetection.getClient(options);
-        tflite = interpreter;
+        //tflite = interpreter;
     }
 
     @Override

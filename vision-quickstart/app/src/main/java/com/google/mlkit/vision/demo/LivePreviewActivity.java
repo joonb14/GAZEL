@@ -42,6 +42,7 @@ import android.widget.Toast;
 import com.google.android.gms.common.annotation.KeepName;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.ml.common.modeldownload.FirebaseModelManager;
 import com.google.firebase.ml.custom.FirebaseCustomRemoteModel;
 import com.google.mlkit.vision.demo.facedetector.FaceDetectorProcessor;
@@ -207,7 +208,8 @@ public final class LivePreviewActivity extends AppCompatActivity
                             });
 
                     cameraSource.setMachineLearningFrameProcessor(
-                            new FaceDetectorProcessor(this, faceDetectorOptions, interpreter));
+                            //new FaceDetectorProcessor(this, faceDetectorOptions, interpreter));
+                            new FaceDetectorProcessor(this, faceDetectorOptions));
                     break;
                 default:
                     Log.e(TAG, "Unknown model: " + model);

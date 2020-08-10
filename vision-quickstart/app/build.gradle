@@ -41,6 +41,7 @@ repositories {
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'com.google.firebase:firebase-ml-model-interpreter:22.0.3'
+    implementation 'com.google.firebase:firebase-analytics:17.4.4'
     implementation 'org.tensorflow:tensorflow-lite:2.0.0'
     // Face features
     implementation 'com.google.mlkit:face-detection:16.0.1'
@@ -76,3 +77,5 @@ configurations {
     // com.google.guava:guava and com.google.guava:listenablefuture together.
     all*.exclude group: 'com.google.guava', module: 'listenablefuture'
 }
+
+apply plugin: 'com.google.gms.google-services'
