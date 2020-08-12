@@ -18,6 +18,7 @@ package com.google.mlkit.vision.demo;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -78,6 +79,8 @@ public final class LivePreviewActivity extends AppCompatActivity
     private GraphicOverlay graphicOverlay;
     private String selectedModel = FACE_DETECTION;
     private Interpreter interpreter;
+    private static SharedPreferences sf;
+    private static int count;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,12 +110,24 @@ public final class LivePreviewActivity extends AppCompatActivity
                             SettingsActivity.LaunchSource.LIVE_PREVIEW);
                     startActivity(intent);
                 });
-
+        sf = getPreferences(Context.MODE_PRIVATE);
+        count = sf.getInt("count",0);
         if (allPermissionsGranted()) {
             createCameraSource(selectedModel);
         } else {
             getRuntimePermissions();
         }
+    }
+    public static SharedPreferences getSf() {
+        return sf;
+    }
+
+    public static int addCount(){
+        count+=1;
+        SharedPreferences.Editor editor = sf.edit();
+        editor.putInt("count",count);
+        editor.commit();
+        return count;
     }
 
     @Override
@@ -208,8 +223,7 @@ public final class LivePreviewActivity extends AppCompatActivity
                             });
 
                     cameraSource.setMachineLearningFrameProcessor(
-                            //new FaceDetectorProcessor(this, faceDetectorOptions, interpreter));
-                            new FaceDetectorProcessor(this, faceDetectorOptions));
+                            new FaceDetectorProcessor(this, faceDetectorOptions, interpreter));
                     break;
                 default:
                     Log.e(TAG, "Unknown model: " + model);

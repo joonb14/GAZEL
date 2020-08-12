@@ -20,6 +20,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.util.Log;
 
 import com.google.mlkit.vision.demo.GraphicOverlay;
 import com.google.mlkit.vision.demo.GraphicOverlay.Graphic;
@@ -28,6 +29,7 @@ import com.google.mlkit.vision.face.FaceContour;
 import com.google.mlkit.vision.face.FaceLandmark;
 import com.google.mlkit.vision.face.FaceLandmark.LandmarkType;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -35,6 +37,7 @@ import java.util.Locale;
  * graphic overlay view.
  */
 public class FaceGraphic extends Graphic {
+    private String TAG = "MOBED_FaceGraphic";
     private static final float EYE_BOX_RATIO = 1.4f;
     private static final float FACE_POSITION_RADIUS = 4.0f;
     private static final float ID_TEXT_SIZE = 30.0f;
@@ -57,21 +60,22 @@ public class FaceGraphic extends Graphic {
     };
     public float leftEyeleft, leftEyetop, leftEyeright, leftEyebottom;
     public float rightEyeleft, rightEyetop, rightEyeright, rightEyebottom;
-    public static final int FACE = 1;
-    public static final int LEFT_EYEBROW_TOP = 2;
-    public static final int LEFT_EYEBROW_BOTTOM = 3;
-    public static final int RIGHT_EYEBROW_TOP = 4;
-    public static final int RIGHT_EYEBROW_BOTTOM = 5;
-    public static final int LEFT_EYE = 6;
-    public static final int RIGHT_EYE = 7;
-    public static final int UPPER_LIP_TOP = 8;
-    public static final int UPPER_LIP_BOTTOM = 9;
-    public static final int LOWER_LIP_TOP = 10;
-    public static final int LOWER_LIP_BOTTOM = 11;
-    public static final int NOSE_BRIDGE = 12;
-    public static final int NOSE_BOTTOM = 13;
-    public static final int LEFT_CHEEK = 14;
-    public static final int RIGHT_CHEEK = 15;
+//
+//    public static final int FACE = 1;
+//    public static final int LEFT_EYEBROW_TOP = 2;
+//    public static final int LEFT_EYEBROW_BOTTOM = 3;
+//    public static final int RIGHT_EYEBROW_TOP = 4;
+//    public static final int RIGHT_EYEBROW_BOTTOM = 5;
+//    public static final int LEFT_EYE = 6;
+//    public static final int RIGHT_EYE = 7;
+//    public static final int UPPER_LIP_TOP = 8;
+//    public static final int UPPER_LIP_BOTTOM = 9;
+//    public static final int LOWER_LIP_TOP = 10;
+//    public static final int LOWER_LIP_BOTTOM = 11;
+//    public static final int NOSE_BRIDGE = 12;
+//    public static final int NOSE_BOTTOM = 13;
+//    public static final int LEFT_CHEEK = 14;
+//    public static final int RIGHT_CHEEK = 15;
 
     private final Paint facePositionPaint;
     private final Paint  rightEyePaint,leftEyePaint;
@@ -87,7 +91,7 @@ public class FaceGraphic extends Graphic {
         facePositionPaint.setColor(selectedColor);
 
         leftEyePaint = new Paint();
-        leftEyePaint.setColor(Color.RED);
+        leftEyePaint.setColor(Color.WHITE);
         leftEyePaint.setStyle(Paint.Style.STROKE);
         leftEyePaint.setStrokeWidth(BOX_STROKE_WIDTH);
 
@@ -124,17 +128,17 @@ public class FaceGraphic extends Graphic {
         int colorID = (face.getTrackingId() == null)
                 ? 0 : Math.abs(face.getTrackingId() % NUM_COLORS);
 
+        List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
+        List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
+        float righteye_leftx = translateX(rightEyeContour.get(0).x);
+        float righteye_lefty = translateY(rightEyeContour.get(0).y);
+        float righteye_rightx = translateX(rightEyeContour.get(8).x);
+        float righteye_righty = translateY(rightEyeContour.get(8).y);
+        float lefteye_leftx = translateX(leftEyeContour.get(0).x);
+        float lefteye_lefty = translateY(leftEyeContour.get(0).y);
+        float lefteye_rightx = translateX(leftEyeContour.get(8).x);
+        float lefteye_righty = translateY(leftEyeContour.get(8).y);
 
-        FaceContour leftEyeContour = face.getContour(LEFT_EYE);
-        FaceContour rightEyeContour = face.getContour(RIGHT_EYE);
-        float righteye_leftx = translateX(rightEyeContour.getPoints().get(0).x);
-        float righteye_lefty = translateY(rightEyeContour.getPoints().get(0).y);
-        float righteye_rightx = translateX(rightEyeContour.getPoints().get(7).x);
-        float righteye_righty = translateY(rightEyeContour.getPoints().get(7).y);
-        float lefteye_leftx = translateX(leftEyeContour.getPoints().get(0).x);
-        float lefteye_lefty = translateY(leftEyeContour.getPoints().get(0).y);
-        float lefteye_rightx = translateX(leftEyeContour.getPoints().get(7).x);
-        float lefteye_righty = translateY(leftEyeContour.getPoints().get(7).y);
         float righteye_centerx = (righteye_leftx + righteye_rightx)/2.0f;
         float righteye_centery = (righteye_lefty + righteye_righty)/2.0f;
         float lefteye_centerx = (lefteye_leftx + lefteye_rightx)/2.0f;
@@ -153,6 +157,8 @@ public class FaceGraphic extends Graphic {
         rightEyebottom = righteye_centery - righteyeboxsize;
         canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
         canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
+        Log.d(TAG, "Right Eye: "+rightEyeleft+", "+rightEyetop+", "+rightEyeright+", "+rightEyebottom);
+        Log.d(TAG, "Left Eye: "+leftEyeleft+", "+leftEyetop+", "+leftEyeright+", "+leftEyebottom);
 
         // Draw facial landmarks
         drawFaceLandmark(canvas, FaceLandmark.LEFT_EYE);

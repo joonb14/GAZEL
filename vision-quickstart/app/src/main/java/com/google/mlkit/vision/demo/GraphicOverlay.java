@@ -20,6 +20,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import com.google.common.base.Preconditions;
@@ -47,6 +48,7 @@ import java.util.List;
  * </ol>
  */
 public class GraphicOverlay extends View {
+    private String TAG = "MOBED_GraphicOverlay";
     private final Object lock = new Object();
     private final List<Graphic> graphics = new ArrayList<>();
     // Matrix for transforming from image coordinates to overlay view coordinates.
@@ -65,6 +67,7 @@ public class GraphicOverlay extends View {
     private float postScaleHeightOffset;
     private boolean isImageFlipped;
     private boolean needUpdateTransformation = true;
+
 
     /**
      * Base class for a custom graphics object to be rendered within the graphic overlay. Subclass
@@ -193,6 +196,7 @@ public class GraphicOverlay extends View {
             this.imageWidth = imageWidth;
             this.imageHeight = imageHeight;
             this.isImageFlipped = isFlipped;
+            Log.d(TAG,"isImageFlipped: "+isImageFlipped);
             needUpdateTransformation = true;
         }
         postInvalidate();
