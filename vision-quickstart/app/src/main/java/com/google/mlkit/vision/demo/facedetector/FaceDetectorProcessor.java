@@ -55,24 +55,25 @@ import java.util.Map;
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static final String TAG = "MOBED_FaceDetector";
+    public static Interpreter tflite;
+    private int resolution = 224;
+    private int grid_size = 50;
     public static Bitmap image;
     private final FaceDetector detector;
-    Interpreter tflite;
     public float leftEyeleft, leftEyetop, leftEyeright, leftEyebottom;
     public float rightEyeleft, rightEyetop, rightEyeright, rightEyebottom;
     private RenderScript RS;
     private ScriptC_singlesource script;
     private static final float EYE_BOX_RATIO = 1.4f;
 
-    private float[][][][] left_4d, right_4d, detface_4d, face_grid;
+    private float[][][][] left_4d, right_4d, lefteye_grid, righteye_grid;
 
     private float yhatX =0, yhatY=0;
 
-    public FaceDetectorProcessor(Context context, FaceDetectorOptions options, Interpreter interpreter) {
+    public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
         Log.v(MANUAL_TESTING_LOG, "Face detector options: " + options);
         detector = FaceDetection.getClient(options);
-        tflite = interpreter;
         RS = RenderScript.create(context);
         script = new ScriptC_singlesource(RS);
     }
@@ -128,14 +129,104 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
             try {
                 Bitmap leftBitmap=Bitmap.createBitmap(image, (int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2));
                 Bitmap rightBitmap=Bitmap.createBitmap(image, (int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2));
-//                Allocation inputAllocation = Allocation.createFromBitmap( RS, leftBitmap);
-//                Allocation outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
-//                script.invoke_process(inputAllocation, outputAllocation);
-//                outputAllocation.copyTo(leftBitmap);
-//                inputAllocation = Allocation.createFromBitmap( RS, rightBitmap);
-//                outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
-//                script.invoke_process(inputAllocation, outputAllocation);
-//                outputAllocation.copyTo(rightBitmap);
+                if (leftBitmap.getHeight() > resolution){
+                    leftBitmap = Bitmap.createScaledBitmap(leftBitmap, resolution,resolution,false);
+                }
+                if (rightBitmap.getHeight() > resolution){
+                    rightBitmap = Bitmap.createScaledBitmap(rightBitmap, resolution,resolution,false);
+                }
+                //After RenderScript, Y value will be stored in Red pixel value
+                Allocation inputAllocation = Allocation.createFromBitmap( RS, leftBitmap);
+                Allocation outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
+                script.invoke_process(inputAllocation, outputAllocation);
+                outputAllocation.copyTo(leftBitmap);
+                inputAllocation = Allocation.createFromBitmap( RS, rightBitmap);
+                outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
+                script.invoke_process(inputAllocation, outputAllocation);
+                outputAllocation.copyTo(rightBitmap);
+                if (leftBitmap.getHeight() < resolution){
+                    leftBitmap = Bitmap.createScaledBitmap(leftBitmap, resolution,resolution,false);
+                }
+                if (rightBitmap.getHeight() < resolution){
+                    rightBitmap = Bitmap.createScaledBitmap(rightBitmap, resolution,resolution,false);
+                }
+                int[] eye = new int[resolution*resolution];
+
+                /**
+                 * Left Eye
+                 * */
+                leftBitmap.getPixels(eye,0,resolution,0,0,resolution,resolution);
+                left_4d = new float[1][resolution][resolution][1];
+                for(int y = 0; y < resolution; y++) {
+                    for (int x = 0; x < resolution; x++) {
+                        int index = y * resolution + x;
+                        left_4d[0][y][x][0] = (eye[index] & 0x00FF0000) >> 16;
+                    }
+                }
+                /**
+                 * Right Eye
+                 * */
+                rightBitmap.getPixels(eye,0,resolution,0,0,resolution,resolution);
+                right_4d = new float[1][resolution][resolution][1];
+                for(int y = 0; y < resolution; y++) {
+                    for (int x = 0; x < resolution; x++) {
+                        int index = y * resolution + x;
+                        right_4d[0][y][x][0] = (eye[index] & 0x00FF0000) >> 16;
+                    }
+                }
+
+                int image_width = image.getWidth();
+                int image_height = image.getHeight();
+                //left, bottom, width, height
+                //(int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2)
+                //(int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2)
+                float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
+                float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
+                float w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
+                float h_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_height));
+
+                lefteye_grid = new float[1][grid_size][grid_size][1];
+                for(int h=0; h<grid_size; h++){
+                    for(int w=0; w<grid_size; w++) {
+                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+                            lefteye_grid[0][h][w][0] = 1;
+                        }
+                        else lefteye_grid[0][h][w][0] = 0;
+                    }
+                }
+
+                w_start = Math.round(grid_size*(rightEyeleft/(float)image_width));
+                h_start = Math.round(grid_size*(rightEyebottom/(float)image_height));
+                w_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_width));
+                h_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_height));
+
+                righteye_grid = new float[1][grid_size][grid_size][1];
+                for(int h=0; h<grid_size; h++){
+                    for(int w=0; w<grid_size; w++) {
+                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+                            righteye_grid[0][h][w][0] = 1;
+                        }
+                        else righteye_grid[0][h][w][0] = 0;
+                    }
+                }
+
+                float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
+
+                float[][] output = new float[1][2];
+                Map<Integer, Object> outputs = new HashMap<>();
+                outputs.put(0, output);
+                try {
+                    tflite.runForMultipleInputsOutputs(inputs, outputs);
+                    yhatX = output[0][0];
+                    yhatY = output[0][1];
+                    Log.d(TAG, "tflite is working!");
+                }
+                catch (java.lang.NullPointerException e){
+                    Log.e(TAG, "tflite is not working: "+ e);
+                    e.printStackTrace();
+                }
+
+                Log.d("MOBED_GazePoint","x : "+String.format("%f", yhatX)+" || y : "+String.format("%f", yhatY));
 
                 /**
                  * MOBED SaveBitmapToFileCache
@@ -145,14 +236,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                int count = sf.getInt("count",0);
 //                String file0 = "lefteye"+count+".jpg";
 //                String file1 = "righteye"+count+".jpg";
-//                Log.d(TAG, "file0: "+file0);
 //                SaveBitmapToFileCache(leftBitmap,"/sdcard/CaptureApp/lefteye/",file0);
 //                SaveBitmapToFileCache(rightBitmap,"/sdcard/CaptureApp/righteye/",file1);
 //                Log.d(TAG, "Bitmap saved");
 //                LivePreviewActivity.addCount();
             }
             catch (java.lang.IllegalArgumentException e) {
-                Log.e(TAG, "java.lang.IllegalArgumentException x + width must be <= bitmap.width()");
+                Log.e(TAG, "java.lang.IllegalArgumentException");
+                e.printStackTrace();
             }
             Log.d(TAG, "Bitmap created");
 

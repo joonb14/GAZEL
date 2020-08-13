@@ -16,11 +16,13 @@
 
 package com.google.mlkit.vision.demo;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -55,10 +57,14 @@ import com.google.mlkit.vision.face.FaceDetectorOptions;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -196,6 +202,10 @@ public final class LivePreviewActivity extends AppCompatActivity
                             PreferenceUtils.getFaceDetectorOptionsForLivePreview(this);
 
                     //MOBED Custom Model
+//                    FileInputStream f_input_stream= new FileInputStream(new File("custom_models/jw_model.tflite"));
+//                    FileChannel f_channel = f_input_stream.getChannel();
+//                    MappedByteBuffer tflite_model = f_channel.map(FileChannel.MapMode.READ_ONLY, 0, f_channel .size());
+//                    interpreter = new Interpreter(tflite_model);
                     FirebaseCustomRemoteModel remoteModel =
                             new FirebaseCustomRemoteModel.Builder("MobiGaze").build();
                     FirebaseModelManager.getInstance().getLatestModelFile(remoteModel)
@@ -207,13 +217,15 @@ public final class LivePreviewActivity extends AppCompatActivity
                                         interpreter = new Interpreter(modelFile);
                                     } else {
                                         try {
-                                            InputStream inputStream = getAssets().open("model.tflite");
+                                            InputStream inputStream = getAssets().open("custom_models/jw_model.tflite");
                                             byte[] model = new byte[inputStream.available()];
                                             inputStream.read(model);
                                             ByteBuffer buffer = ByteBuffer.allocateDirect(model.length)
                                                     .order(ByteOrder.nativeOrder());
                                             buffer.put(model);
                                             interpreter = new Interpreter(buffer);
+                                            FaceDetectorProcessor.tflite = interpreter;
+                                            Log.d(TAG, "TFLite Interpreter Loaded");
                                         } catch (IOException e) {
                                             // File not found?
                                             Log.e(TAG, "TFLite not Loaded " + e);
@@ -223,7 +235,7 @@ public final class LivePreviewActivity extends AppCompatActivity
                             });
 
                     cameraSource.setMachineLearningFrameProcessor(
-                            new FaceDetectorProcessor(this, faceDetectorOptions, interpreter));
+                            new FaceDetectorProcessor(this, faceDetectorOptions));
                     break;
                 default:
                     Log.e(TAG, "Unknown model: " + model);
