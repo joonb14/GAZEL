@@ -21,3 +21,13 @@ You can check the output on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 ### It's Working but not Well
 MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
 Training Code will be uploaded soon.
+### Issues
+TensorFlow Lite Conversion. This is the main problem... I used same model for training but it works on someone but doesn't not work on someone. Also, before you load your tflite model, you must check the input details to make sure input order is correct.
+<pre><code>import tensorflow as tf
+
+tflite = tf.lite.Interpreter(model_path="path/to/model.tflite")
+tflite.get_input_details()
+</code></pre>
+Then reorder your inputs in <b>FaceDetectorProcessor.java</b>
+<pre><code>float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid}; //reorder the parameters
+</code></pre>
