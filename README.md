@@ -1,8 +1,8 @@
 # MobiGaze
-This work is based on Google's ML kit<br>
+This work is based on Google's ML kit Sample<br>
+https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br>
 Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
-https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br>
 ### Before Cloning to Your Directory
 This work requires <b>git-lfs</b> so you must install it first. (tflite file exceeds 100MB...)<br>
 After installing git-lfs, on the Directory you want to clone this work, <br>
