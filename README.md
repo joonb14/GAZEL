@@ -22,7 +22,8 @@ You can check the output on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
 Training Code will be uploaded soon.
 ### Issues
-TensorFlow Lite Conversion. This is the main problem... I used same model for training but it works on someone but doesn't not work on someone. Also, before you load your tflite model, you must check the input details to make sure input order is correct.
+TensorFlow Lite Conversion. This is the main problem... I used same model for training but it works on someone but doesn't not work on someone. Also, before you load your tflite model, you must check the input details to make sure input order is correct.<br>
+In case you are using python interpreter,
 <pre><code>import tensorflow as tf
 
 tflite = tf.lite.Interpreter(model_path="path/to/model.tflite")
