@@ -17,4 +17,6 @@ Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
 stored in asset folder. Created with Keras, converted to tflite.<br>
 named "model.tflite"<br>
-# Working on it! Please wait!
+### It's Working but not Well
+MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
+Training Code will be uploaded soon.
