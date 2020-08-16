@@ -56,7 +56,7 @@ import java.util.Map;
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static final String TAG = "MOBED_FaceDetector";
     public static Interpreter tflite;
-    private int resolution = 224;
+    private int resolution = 64;
     private int grid_size = 50;
     public static Bitmap image;
     private final FaceDetector detector;
@@ -216,7 +216,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 /**
                  * Wrap them up to use them as input for TensorFlow Lite model
                  * */
-                float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
+                //For jw_model.tflite
+                //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
+                //For ykmodel.tflite
+                float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
