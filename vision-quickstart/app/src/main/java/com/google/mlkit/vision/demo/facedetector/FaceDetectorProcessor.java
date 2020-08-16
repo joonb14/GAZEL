@@ -100,6 +100,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
          * */
         for (Face face : faces) {
             //MOBED
+            //This is how you get coordinates, and crop left and right eye
+            //Look at https://firebase.google.com/docs/ml-kit/detect-faces#example_2_face_contour_detection for details.
+            //We specifically used Eye Contour's point 0 and 8.
             List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
             List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
             float righteye_leftx = rightEyeContour.get(0).x;
@@ -124,8 +127,6 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
             rightEyetop = righteye_centery + righteyeboxsize;
             rightEyeright = righteye_centerx + righteyeboxsize;
             rightEyebottom = righteye_centery - righteyeboxsize;
-//            Log.d(TAG, "Right Eye: "+rightEyeleft+", "+rightEyetop+", "+rightEyeright+", "+rightEyebottom);
-//            Log.d(TAG, "Left Eye: "+leftEyeleft+", "+leftEyetop+", "+leftEyeright+", "+leftEyebottom);
             try {
                 Bitmap leftBitmap=Bitmap.createBitmap(image, (int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2));
                 Bitmap rightBitmap=Bitmap.createBitmap(image, (int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2));
@@ -135,6 +136,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 if (rightBitmap.getHeight() > resolution){
                     rightBitmap = Bitmap.createScaledBitmap(rightBitmap, resolution,resolution,false);
                 }
+                //Renderscript converts RGBA value to YUV's Y value.
                 //After RenderScript, Y value will be stored in Red pixel value
                 Allocation inputAllocation = Allocation.createFromBitmap( RS, leftBitmap);
                 Allocation outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
@@ -160,7 +162,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 for(int y = 0; y < resolution; y++) {
                     for (int x = 0; x < resolution; x++) {
                         int index = y * resolution + x;
-                        left_4d[0][y][x][0] = (eye[index] & 0x00FF0000) >> 16;
+                        left_4d[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
                     }
                 }
                 /**
@@ -171,15 +173,16 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 for(int y = 0; y < resolution; y++) {
                     for (int x = 0; x < resolution; x++) {
                         int index = y * resolution + x;
-                        right_4d[0][y][x][0] = (eye[index] & 0x00FF0000) >> 16;
+                        right_4d[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
                     }
                 }
 
+                /**
+                 * Eye Grids
+                 * */
                 int image_width = image.getWidth();
                 int image_height = image.getHeight();
                 //left, bottom, width, height
-                //(int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2)
-                //(int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2)
                 float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
                 float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
                 float w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
@@ -210,13 +213,18 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     }
                 }
 
+                /**
+                 * Wrap them up to use them as input for TensorFlow Lite model
+                 * */
                 float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
 
+                // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
                 Map<Integer, Object> outputs = new HashMap<>();
                 outputs.put(0, output);
                 try {
                     tflite.runForMultipleInputsOutputs(inputs, outputs);
+                    //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
                     Log.d(TAG, "tflite is working!");
@@ -230,7 +238,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 
                 /**
                  * MOBED SaveBitmapToFileCache
-                 * Made For Debug Purpose
+                 * Made For Debug Purpose you can save bitmap image to /sdcard/CaptureApp directory
+                 * Then check how the bitmap data is.
                  * */
 //                SharedPreferences sf = LivePreviewActivity.getSf();
 //                int count = sf.getInt("count",0);
@@ -247,104 +256,29 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
             }
             Log.d(TAG, "Bitmap created");
 
-            graphicOverlay.add(new FaceGraphic(graphicOverlay, face));
-            //logExtrasForTesting(face);
-        }
-        if (image!=null) {
-            Bitmap originalCameraImage = image;
-            Log.d(TAG, "Image "+originalCameraImage.getWidth()+","+originalCameraImage.getHeight());
-            Log.d(TAG, "Overlay "+graphicOverlay.getWidth()+","+graphicOverlay.getHeight());
-        }
-        else {
-            Log.d(TAG, "originalCameraImage is null");
+            //Show the Gaze point, Eye Boxes on graphic overlay
+            graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY));
         }
     }
 
-/**
- * MOBED
- * Made For Debug Purpose
-
- * */
-public static void SaveBitmapToFileCache(Bitmap bitmap, String strFilePath, String filename) {
-    File file = new File(strFilePath);
-    if (!file.exists())
-        file.mkdirs();
-    File fileCacheItem = new File(strFilePath + filename);
-    Log.d(TAG, "filename: "+strFilePath + filename);
-    FileOutputStream out = null;
-    try {
-        out = new FileOutputStream(fileCacheItem);
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
-        out.flush();
-        out.close();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-}
-
-
-
-
-    private static void logExtrasForTesting(Face face) {
-        if (face != null) {
-            Log.v(MANUAL_TESTING_LOG, "face bounding box: " + face.getBoundingBox().flattenToString());
-            Log.v(MANUAL_TESTING_LOG, "face Euler Angle X: " + face.getHeadEulerAngleX());
-            Log.v(MANUAL_TESTING_LOG, "face Euler Angle Y: " + face.getHeadEulerAngleY());
-            Log.v(MANUAL_TESTING_LOG, "face Euler Angle Z: " + face.getHeadEulerAngleZ());
-
-            // All landmarks
-            int[] landMarkTypes =
-                    new int[]{
-                            FaceLandmark.MOUTH_BOTTOM,
-                            FaceLandmark.MOUTH_RIGHT,
-                            FaceLandmark.MOUTH_LEFT,
-                            FaceLandmark.RIGHT_EYE,
-                            FaceLandmark.LEFT_EYE,
-                            FaceLandmark.RIGHT_EAR,
-                            FaceLandmark.LEFT_EAR,
-                            FaceLandmark.RIGHT_CHEEK,
-                            FaceLandmark.LEFT_CHEEK,
-                            FaceLandmark.NOSE_BASE
-                    };
-            String[] landMarkTypesStrings =
-                    new String[]{
-                            "MOUTH_BOTTOM",
-                            "MOUTH_RIGHT",
-                            "MOUTH_LEFT",
-                            "RIGHT_EYE",
-                            "LEFT_EYE",
-                            "RIGHT_EAR",
-                            "LEFT_EAR",
-                            "RIGHT_CHEEK",
-                            "LEFT_CHEEK",
-                            "NOSE_BASE"
-                    };
-            for (int i = 0; i < landMarkTypes.length; i++) {
-                FaceLandmark landmark = face.getLandmark(landMarkTypes[i]);
-                if (landmark == null) {
-                    Log.v(
-                            MANUAL_TESTING_LOG,
-                            "No landmark of type: " + landMarkTypesStrings[i] + " has been detected");
-                } else {
-                    PointF landmarkPosition = landmark.getPosition();
-                    String landmarkPositionStr =
-                            String.format(Locale.US, "x: %f , y: %f", landmarkPosition.x, landmarkPosition.y);
-                    Log.v(
-                            MANUAL_TESTING_LOG,
-                            "Position for face landmark: "
-                                    + landMarkTypesStrings[i]
-                                    + " is :"
-                                    + landmarkPositionStr);
-                }
-            }
-            Log.v(
-                    MANUAL_TESTING_LOG,
-                    "face left eye open probability: " + face.getLeftEyeOpenProbability());
-            Log.v(
-                    MANUAL_TESTING_LOG,
-                    "face right eye open probability: " + face.getRightEyeOpenProbability());
-            Log.v(MANUAL_TESTING_LOG, "face smiling probability: " + face.getSmilingProbability());
-            Log.v(MANUAL_TESTING_LOG, "face tracking id: " + face.getTrackingId());
+    /**
+     * MOBED
+     * Made For Debug Purpose
+     * */
+    public static void SaveBitmapToFileCache(Bitmap bitmap, String strFilePath, String filename) {
+        File file = new File(strFilePath);
+        if (!file.exists())
+            file.mkdirs();
+        File fileCacheItem = new File(strFilePath + filename);
+        Log.d(TAG, "filename: "+strFilePath + filename);
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(fileCacheItem);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+            out.flush();
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

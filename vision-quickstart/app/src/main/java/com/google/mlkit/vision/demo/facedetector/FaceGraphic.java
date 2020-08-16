@@ -33,62 +33,33 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Graphic instance for rendering face position, contour, and landmarks within the associated
+ * Graphic instance for rendering eye position and Gaze point
  * graphic overlay view.
  */
 public class FaceGraphic extends Graphic {
     private String TAG = "MOBED_FaceGraphic";
+    private boolean showEyes = true;
     private static final float EYE_BOX_RATIO = 1.4f;
-    private static final float FACE_POSITION_RADIUS = 4.0f;
-    private static final float ID_TEXT_SIZE = 30.0f;
-    private static final float ID_Y_OFFSET = 40.0f;
-    private static final float ID_X_OFFSET = -40.0f;
+    private static final float FACE_POSITION_RADIUS = 40.0f;
     private static final float BOX_STROKE_WIDTH = 5.0f;
-    private static final int NUM_COLORS = 10;
-    private static final int[][] COLORS = new int[][]{
-            // {Text color, background color}
-            {Color.BLACK, Color.WHITE},
-            {Color.WHITE, Color.MAGENTA},
-            {Color.BLACK, Color.LTGRAY},
-            {Color.WHITE, Color.RED},
-            {Color.WHITE, Color.BLUE},
-            {Color.WHITE, Color.DKGRAY},
-            {Color.BLACK, Color.CYAN},
-            {Color.BLACK, Color.YELLOW},
-            {Color.WHITE, Color.BLACK},
-            {Color.BLACK, Color.GREEN}
-    };
     public float leftEyeleft, leftEyetop, leftEyeright, leftEyebottom;
     public float rightEyeleft, rightEyetop, rightEyeright, rightEyebottom;
-//
-//    public static final int FACE = 1;
-//    public static final int LEFT_EYEBROW_TOP = 2;
-//    public static final int LEFT_EYEBROW_BOTTOM = 3;
-//    public static final int RIGHT_EYEBROW_TOP = 4;
-//    public static final int RIGHT_EYEBROW_BOTTOM = 5;
-//    public static final int LEFT_EYE = 6;
-//    public static final int RIGHT_EYE = 7;
-//    public static final int UPPER_LIP_TOP = 8;
-//    public static final int UPPER_LIP_BOTTOM = 9;
-//    public static final int LOWER_LIP_TOP = 10;
-//    public static final int LOWER_LIP_BOTTOM = 11;
-//    public static final int NOSE_BRIDGE = 12;
-//    public static final int NOSE_BOTTOM = 13;
-//    public static final int LEFT_CHEEK = 14;
-//    public static final int RIGHT_CHEEK = 15;
 
-    private final Paint facePositionPaint;
-    private final Paint  rightEyePaint,leftEyePaint;
+    private final Paint  rightEyePaint,leftEyePaint, gazePointPaint;
     private volatile Face face;
+    private float yhatx;
+    private float yhaty;
 
-    FaceGraphic(GraphicOverlay overlay, Face face) {
+    FaceGraphic(GraphicOverlay overlay, Face face, float yhatx, float yhaty) {
         super(overlay);
 
         this.face = face;
-        final int selectedColor = Color.WHITE;
+        this.yhatx = yhatx;
+        this.yhaty = yhaty;
+        final int selectedColor = Color.RED;
 
-        facePositionPaint = new Paint();
-        facePositionPaint.setColor(selectedColor);
+        gazePointPaint = new Paint();
+        gazePointPaint.setColor(selectedColor);
 
         leftEyePaint = new Paint();
         leftEyePaint.setColor(Color.WHITE);
@@ -102,7 +73,7 @@ public class FaceGraphic extends Graphic {
     }
 
     /**
-     * Draws the face annotations for position on the supplied canvas.
+     * Draws the eye positions and gaze point.
      */
     @Override
     public void draw(Canvas canvas) {
@@ -110,71 +81,43 @@ public class FaceGraphic extends Graphic {
         if (face == null) {
             return;
         }
+//        Log.d(TAG, "Canvas Width: "+canvas.getWidth()+" Height: "+ canvas.getHeight());
 
-        // Draws a circle at the position of the detected face, with the face's track id below.
-        float x = translateX(face.getBoundingBox().centerX());
-        float y = translateY(face.getBoundingBox().centerY());
-        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, facePositionPaint);
+        // Draws a circle at the position of the estimated gaze point
+        float x = yhatx;
+        float y = yhaty;
+        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, gazePointPaint);
 
-        // Calculate positions.
-        float left = x - scale(face.getBoundingBox().width() / 2.0f);
-        float top = y - scale(face.getBoundingBox().height() / 2.0f);
-        float right = x + scale(face.getBoundingBox().width() / 2.0f);
-        float bottom = y + scale(face.getBoundingBox().height() / 2.0f);
-        float lineHeight = ID_TEXT_SIZE + BOX_STROKE_WIDTH;
-        float yLabelOffset = -lineHeight;
+        if(showEyes) {
+            List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
+            List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
+            float righteye_leftx = translateX(rightEyeContour.get(0).x);
+            float righteye_lefty = translateY(rightEyeContour.get(0).y);
+            float righteye_rightx = translateX(rightEyeContour.get(8).x);
+            float righteye_righty = translateY(rightEyeContour.get(8).y);
+            float lefteye_leftx = translateX(leftEyeContour.get(0).x);
+            float lefteye_lefty = translateY(leftEyeContour.get(0).y);
+            float lefteye_rightx = translateX(leftEyeContour.get(8).x);
+            float lefteye_righty = translateY(leftEyeContour.get(8).y);
 
-        // Decide color based on face ID
-        int colorID = (face.getTrackingId() == null)
-                ? 0 : Math.abs(face.getTrackingId() % NUM_COLORS);
-
-        List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
-        List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
-        float righteye_leftx = translateX(rightEyeContour.get(0).x);
-        float righteye_lefty = translateY(rightEyeContour.get(0).y);
-        float righteye_rightx = translateX(rightEyeContour.get(8).x);
-        float righteye_righty = translateY(rightEyeContour.get(8).y);
-        float lefteye_leftx = translateX(leftEyeContour.get(0).x);
-        float lefteye_lefty = translateY(leftEyeContour.get(0).y);
-        float lefteye_rightx = translateX(leftEyeContour.get(8).x);
-        float lefteye_righty = translateY(leftEyeContour.get(8).y);
-
-        float righteye_centerx = (righteye_leftx + righteye_rightx)/2.0f;
-        float righteye_centery = (righteye_lefty + righteye_righty)/2.0f;
-        float lefteye_centerx = (lefteye_leftx + lefteye_rightx)/2.0f;
-        float lefteye_centery = (lefteye_lefty + lefteye_righty)/2.0f;
-        float lefteyeboxsize = (lefteye_centerx-lefteye_leftx)*EYE_BOX_RATIO;
-        float righteyeboxsize = (righteye_centerx-righteye_leftx)*EYE_BOX_RATIO;
-//        canvas.drawCircle(righteye_centerx,righteye_centery,FACE_POSITION_RADIUS, rightEyePaint);
-//        canvas.drawCircle(lefteye_centerx,lefteye_centery,FACE_POSITION_RADIUS, leftEyePaint);
-        leftEyeleft = lefteye_centerx - lefteyeboxsize;
-        leftEyetop = lefteye_centery + lefteyeboxsize;
-        leftEyeright = lefteye_centerx + lefteyeboxsize;
-        leftEyebottom = lefteye_centery - lefteyeboxsize;
-        rightEyeleft = righteye_centerx - righteyeboxsize;
-        rightEyetop = righteye_centery + righteyeboxsize;
-        rightEyeright = righteye_centerx + righteyeboxsize;
-        rightEyebottom = righteye_centery - righteyeboxsize;
-        canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
-        canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
-        Log.d(TAG, "Right Eye: "+rightEyeleft+", "+rightEyetop+", "+rightEyeright+", "+rightEyebottom);
-        Log.d(TAG, "Left Eye: "+leftEyeleft+", "+leftEyetop+", "+leftEyeright+", "+leftEyebottom);
-
-        // Draw facial landmarks
-        drawFaceLandmark(canvas, FaceLandmark.LEFT_EYE);
-        drawFaceLandmark(canvas, FaceLandmark.RIGHT_EYE);
-        drawFaceLandmark(canvas, FaceLandmark.LEFT_CHEEK);
-        drawFaceLandmark(canvas, FaceLandmark.RIGHT_CHEEK);
-    }
-
-    private void drawFaceLandmark(Canvas canvas, @LandmarkType int landmarkType) {
-        FaceLandmark faceLandmark = face.getLandmark(landmarkType);
-        if (faceLandmark != null) {
-            canvas.drawCircle(
-                    translateX(faceLandmark.getPosition().x),
-                    translateY(faceLandmark.getPosition().y),
-                    FACE_POSITION_RADIUS,
-                    facePositionPaint);
+            float righteye_centerx = (righteye_leftx + righteye_rightx) / 2.0f;
+            float righteye_centery = (righteye_lefty + righteye_righty) / 2.0f;
+            float lefteye_centerx = (lefteye_leftx + lefteye_rightx) / 2.0f;
+            float lefteye_centery = (lefteye_lefty + lefteye_righty) / 2.0f;
+            float lefteyeboxsize = (lefteye_centerx - lefteye_leftx) * EYE_BOX_RATIO;
+            float righteyeboxsize = (righteye_centerx - righteye_leftx) * EYE_BOX_RATIO;
+            leftEyeleft = lefteye_centerx - lefteyeboxsize;
+            leftEyetop = lefteye_centery + lefteyeboxsize;
+            leftEyeright = lefteye_centerx + lefteyeboxsize;
+            leftEyebottom = lefteye_centery - lefteyeboxsize;
+            rightEyeleft = righteye_centerx - righteyeboxsize;
+            rightEyetop = righteye_centery + righteyeboxsize;
+            rightEyeright = righteye_centerx + righteyeboxsize;
+            rightEyebottom = righteye_centery - righteyeboxsize;
+            canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
+            canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
+//        Log.d(TAG, "Right Eye: "+rightEyeleft+", "+rightEyetop+", "+rightEyeright+", "+rightEyebottom);
+//        Log.d(TAG, "Left Eye: "+leftEyeleft+", "+leftEyetop+", "+leftEyeright+", "+leftEyebottom);
         }
     }
 }
