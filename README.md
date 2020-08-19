@@ -6,7 +6,8 @@ Collaborators: <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
 <a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
 ### Before Cloning to Your Directory
-This work requires <b>git-lfs</b> so you must install it first. (tflite file exceeds 100MB...)<br>
+This work requires <b>git-lfs</b> so you must install it first. (jw_model.tflite file exceeds 100MB...)<br>
+But now we are using lighter model ykmodel.tflite(14MB) so in case you want to use ResNet-18, 224x224x1 input size version, follow instructions below<br>
 After installing git-lfs, on the Directory you want to clone this work, <br>
 <pre><code>$ git lfs install
 Git LFS initialized.
