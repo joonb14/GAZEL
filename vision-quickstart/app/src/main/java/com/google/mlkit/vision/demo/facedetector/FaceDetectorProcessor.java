@@ -16,45 +16,49 @@
 
 package com.google.mlkit.vision.demo.facedetector;
 
+import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import androidx.renderscript.Allocation;
 import androidx.renderscript.RenderScript;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.FirebaseApp;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.demo.GraphicOverlay;
-import com.google.mlkit.vision.demo.LivePreviewActivity;
+import com.google.mlkit.vision.demo.R;
 import com.google.mlkit.vision.demo.VisionProcessorBase;
 import com.google.mlkit.vision.face.Face;
 import com.google.mlkit.vision.face.FaceContour;
 import com.google.mlkit.vision.face.FaceDetection;
 import com.google.mlkit.vision.face.FaceDetector;
 import com.google.mlkit.vision.face.FaceDetectorOptions;
-import com.google.mlkit.vision.face.FaceLandmark;
 
+//TF Lite
 import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+
+//LibSvm
+import umich.cse.yctung.androidlibsvm.LibSVM;
 
 /**
  * Face Detector Demo.
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static final String TAG = "MOBED_FaceDetector";
+    private static int FPS = 30;
     public static Interpreter tflite;
     private int resolution = 64;
     private int grid_size = 50;
@@ -69,13 +73,37 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float[][][][] left_4d, right_4d, lefteye_grid, righteye_grid;
 
     private float yhatX =0, yhatY=0;
+    LibSVM svm;
+    Button calibration_button;
+    private boolean calibration_flag=false;
+    Context Fcontext;
+    private int calibration_phase = 0;
 
     public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
+        this.Fcontext = context;
+        calibration_button = (Button)((Activity)context).findViewById(R.id.calibration);
         Log.v(MANUAL_TESTING_LOG, "Face detector options: " + options);
         detector = FaceDetection.getClient(options);
         RS = RenderScript.create(context);
         script = new ScriptC_singlesource(RS);
+        svm = new LibSVM();
+        calibration_button.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // TODO : click event
+                if(!calibration_flag){
+                    Log.d(TAG,"Calibration Start");
+                    calibration_flag =true;
+                    calibration_button.setText(R.string.calibration_end);
+                }
+                else {
+                    Log.d(TAG,"Calibration Stop");
+                    calibration_flag =false;
+                    calibration_button.setText(R.string.calibration);
+                }
+            }
+        });
     }
 
     @Override
@@ -258,9 +286,72 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 e.printStackTrace();
             }
             Log.d(TAG, "Bitmap created");
-
-            //Show the Gaze point, Eye Boxes on graphic overlay
-            graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY));
+            /**
+             * MOBED Calibration Implementation
+             * Made For Runtime Calibration
+             * 5 - points Calibration (TopLeft, TopRight, BottomLeft, BottomRight, Center)
+             * */
+            if(calibration_flag){
+                calibration_button.setVisibility(View.INVISIBLE);
+                GraphicOverlay maskOverlay = ((Activity)Fcontext).findViewById(R.id.mask_overlay);
+                maskOverlay.setVisibility(View.VISIBLE);
+                Button calibration_point = (Button) ((Activity)Fcontext).findViewById(R.id.calibration_point);
+                calibration_point.setVisibility(View.VISIBLE);
+                RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)calibration_point.getLayoutParams();
+                TextView calibration_instruction = (TextView) ((Activity)Fcontext).findViewById(R.id.calibration_instruction);
+                // Calibration Phase
+                if(calibration_phase<FPS) {
+                    calibration_point.setVisibility(View.INVISIBLE);
+                    calibration_instruction.setVisibility(View.VISIBLE);
+                }
+                else if(calibration_phase<FPS*3) {
+                    calibration_instruction.setVisibility(View.INVISIBLE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                }
+                else if(calibration_phase<FPS*4) {
+                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                }
+                else if(calibration_phase<FPS*5) {
+                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                }
+                else if(calibration_phase<FPS*6) {
+                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                }
+                else if(calibration_phase<FPS*7) {
+                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                }
+                else if(calibration_phase<FPS*8) {
+                    calibration_flag=false;
+                }
+                calibration_phase++;
+                calibration_point.setLayoutParams(params);
+            }
+            else {
+                calibration_phase=0;
+                //Show the Gaze point, Eye Boxes on graphic overlay
+                GraphicOverlay maskOverlay = ((Activity)Fcontext).findViewById(R.id.mask_overlay);
+                maskOverlay.setVisibility(View.INVISIBLE);
+                Button calibration_point = (Button) ((Activity)Fcontext).findViewById(R.id.calibration_point);
+                calibration_point.setVisibility(View.INVISIBLE);
+                calibration_button.setVisibility(View.VISIBLE);
+                calibration_button.setText(R.string.calibration);
+                graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY));
+            }
         }
     }
 

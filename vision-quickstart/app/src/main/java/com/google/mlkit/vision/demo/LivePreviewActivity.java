@@ -107,15 +107,6 @@ public final class LivePreviewActivity extends AppCompatActivity
         List<String> options = new ArrayList<>();
         options.add(FACE_DETECTION);
 
-
-        ImageView settingsButton = findViewById(R.id.settings_button);
-        settingsButton.setOnClickListener(
-                v -> {
-                    Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
-                    intent.putExtra(SettingsActivity.EXTRA_LAUNCH_SOURCE,
-                            SettingsActivity.LaunchSource.LIVE_PREVIEW);
-                    startActivity(intent);
-                });
         sf = getPreferences(Context.MODE_PRIVATE);
         count = sf.getInt("count",0);
         if (allPermissionsGranted()) {
