@@ -54,7 +54,7 @@
       android:textSize="40sp"
       android:gravity="center"
       android:textColor="#FFFFFF"
-      android:visibility="visible">
+      android:visibility="invisible">
   </TextView>
   <Button
       android:id="@+id/calibration_point"

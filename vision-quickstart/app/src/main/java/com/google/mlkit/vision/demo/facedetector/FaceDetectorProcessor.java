@@ -22,6 +22,9 @@ import android.graphics.Bitmap;
 import android.graphics.PointF;
 import androidx.renderscript.Allocation;
 import androidx.renderscript.RenderScript;
+
+import android.os.Environment;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -44,8 +47,11 @@ import com.google.mlkit.vision.face.FaceDetectorOptions;
 //TF Lite
 import org.tensorflow.lite.Interpreter;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +102,18 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     Log.d(TAG,"Calibration Start");
                     calibration_flag =true;
                     calibration_button.setText(R.string.calibration_end);
+                    File logFile1 = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/trainX.txt");
+                    File logFile2 = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/trainY.txt");
+                    if (logFile1.exists()) {
+                        try {
+                            logFile1.delete();
+                            logFile2.delete();
+                        }
+                        catch (Exception e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 else {
                     Log.d(TAG,"Calibration Stop");
@@ -292,6 +310,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
              * 5 - points Calibration (TopLeft, TopRight, BottomLeft, BottomRight, Center)
              * */
             if(calibration_flag){
+                DisplayMetrics dm = Fcontext.getResources().getDisplayMetrics();
+                //for normalization
+                float normx = yhatX/(float) dm.widthPixels;
+                float normy = yhatY/(float) dm.heightPixels;
                 calibration_button.setVisibility(View.INVISIBLE);
                 GraphicOverlay maskOverlay = ((Activity)Fcontext).findViewById(R.id.mask_overlay);
                 maskOverlay.setVisibility(View.VISIBLE);
@@ -310,30 +332,45 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
                     params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                    //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
+                    appendLog("0 1:"+normx+" 2:"+normy,"X");
+                    appendLog("0 1:"+normx+" 2:"+normy,"Y");
                 }
                 else if(calibration_phase<FPS*4) {
                     params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
+                    appendLog("1 1:"+normx+" 2:"+normy,"X");
+                    appendLog("0 1:"+normx+" 2:"+normy,"Y");
                 }
                 else if(calibration_phase<FPS*5) {
                     params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                     params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
                     params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                    //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
+                    appendLog("0 1:"+normx+" 2:"+normy,"X");
+                    appendLog("1 1:"+normx+" 2:"+normy,"Y");
                 }
                 else if(calibration_phase<FPS*6) {
                     params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                     params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                    //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
+                    appendLog("1 1:"+normx+" 2:"+normy,"X");
+                    appendLog("1 1:"+normx+" 2:"+normy,"Y");
                 }
                 else if(calibration_phase<FPS*7) {
                     params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
                     params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                    //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
+                    appendLog("0.5 1:"+normx+" 2:"+normy,"X");
+                    appendLog("0.5 1:"+normx+" 2:"+normy,"Y");
                 }
                 else if(calibration_phase<FPS*8) {
                     calibration_flag=false;
@@ -379,5 +416,36 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     @Override
     protected void onFailure(@NonNull Exception e) {
         Log.e(TAG, "Face detection failed " + e);
+    }
+
+    /**
+     * MOBED appendLog()
+     * for libsvm trainset creation
+     * */
+    public void appendLog(String text, String option) {
+        File logFile = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/train"+option+".txt");
+        if (!logFile.exists()) {
+            try {
+                if(logFile.createNewFile()){
+                    BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
+                    buf.close();
+                }
+            }
+            catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        try {
+            //BufferedWriter for performance, true to set append to file flag
+            BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
+            buf.append(text);
+            buf.newLine();
+            buf.close();
+        }
+        catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 }

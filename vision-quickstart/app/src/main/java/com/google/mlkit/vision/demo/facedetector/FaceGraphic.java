@@ -50,6 +50,7 @@ public class FaceGraphic extends Graphic {
     private volatile Face face;
     private float yhatx;
     private float yhaty;
+    private float x, y;
 
     FaceGraphic(GraphicOverlay overlay, Face face, float yhatx, float yhaty) {
         super(overlay);
@@ -87,9 +88,11 @@ public class FaceGraphic extends Graphic {
         // Draws a circle at the position of the estimated gaze point
         DisplayMetrics dm = getApplicationContext().getResources().getDisplayMetrics();
         //Log.d(TAG, "Display Metric w/h: " + width+"/"+height);
+        //
+        // TODO filter and smooth out values so that gaze point movement looks like smooth pursuit
+        //
         int width = dm.widthPixels;
         int height = dm.heightPixels;
-        float x, y;
         if (yhatx>=width) x = width;
         else if(yhatx<0) x =0;
         else x = yhatx;
@@ -126,36 +129,7 @@ public class FaceGraphic extends Graphic {
             rightEyebottom = righteye_centery - righteyeboxsize;
             canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
             canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
-//        Log.d(TAG, "Right Eye: "+rightEyeleft+", "+rightEyetop+", "+rightEyeright+", "+rightEyebottom);
-//        Log.d(TAG, "Left Eye: "+leftEyeleft+", "+leftEyetop+", "+leftEyeright+", "+leftEyebottom);
-//            Paint paint = new Paint();
-//            paint.setColor(Color.RED);
-//            paint.setAlpha(50);
-//            if(yhatx < width / (float)2 && yhaty < height / (float)4) {
-//                canvas.drawRect(0, 0, width / (float)2, height / (float)4, paint);
-//                //Log.d("jjjj","1");
-//            } else if(yhatx > width / (float)2 && yhaty < height / (float)4) {
-//                canvas.drawRect(width / (float)2, 0, width / (float)1, height / (float)4, paint);
-//                //Log.d("jjjj","2");
-//            } else if(yhatx < width / (float)2 && yhaty < height / (float)2) {
-//                canvas.drawRect(0, height / (float)4, width / (float)2, height / (float)2, paint);
-//                //Log.d("jjjj","3");
-//            } else if(yhatx > width / (float)2 && yhaty < height / (float)2) {
-//                canvas.drawRect(width / (float)2, height / (float)4, width / (float)1, height / (float)2, paint);
-//                //Log.d("jjjj","4");
-//            } else if(yhatx < width / (float)2 && yhaty < height * (float)3 / (float)4) {
-//                canvas.drawRect(0, height / (float)2, width / (float)2, height * (float)3 / (float)4, paint);
-//                //Log.d("jjjj","5");
-//            } else if(yhatx > width / (float)2 && yhaty < height * (float)3 / (float)4) {
-//                canvas.drawRect(width / (float)2, height / (float)2, width / (float)1, height * (float)3 / (float)4, paint);
-//                //Log.d("jjjj","6");
-//            } else if(yhatx < width / (float)2) {
-//                canvas.drawRect(0, height * (float)3 / (float)4, width / (float)2, height / (float)1, paint);
-//                //Log.d("jjjj","7");
-//            } else {
-//                canvas.drawRect(width / (float)2, height * (float)3 / (float)4, width / (float)1, height / (float)1, paint);
-//                //Log.d("jjjj","8");
-//            }
+
         }
     }
 }

@@ -31,6 +31,7 @@ import androidx.core.app.ActivityCompat.OnRequestPermissionsResultCallback;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -92,6 +93,15 @@ public final class LivePreviewActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
+
+        //MOBED
+        String dir_path = Environment.getExternalStorageDirectory() + "/MobiGaze";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
 
         setContentView(R.layout.activity_vision_live_preview);
 
@@ -346,5 +356,13 @@ public final class LivePreviewActivity extends AppCompatActivity
         }
         Log.i(TAG, "Permission NOT granted: " + permission);
         return false;
+    }
+
+    public boolean dir_exists(String dir_path) {
+        boolean ret = false;
+        File dir = new File(dir_path);
+        if(dir.exists() && dir.isDirectory())
+            ret = true;
+        return ret;
     }
 }
