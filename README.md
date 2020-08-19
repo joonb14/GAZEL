@@ -26,7 +26,7 @@ Now working on Calibration. Typically we are going to use 4 or 5 point calibrati
 Since multi output SVR doesn't exist in android, we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
 Training Code will be uploaded soon.
 ### Issues
-TensorFlow Lite Conversion. This is the main problem... I used same model for training but it works on someone but doesn't not work on someone. Also, before you load your tflite model, you must check the input details to make sure input order is correct.<br>
+TensorFlow Lite Conversion. Before you load your tflite model, you must check the input details to make sure input order is correct.<br>
 In case you are using python interpreter,
 <pre><code>import tensorflow as tf
 
