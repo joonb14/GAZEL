@@ -1,6 +1,6 @@
 # MobiGaze
 This work is based on Google's ML kit Sample(2020, June Version)<br>
-https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br>
+https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br><br>
 Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
@@ -14,7 +14,7 @@ Git LFS initialized.
 $ git clone https://github.com/joonb14/MobiGaze.git
 </code></pre>
 ### Summary
-I mainly changed <b>FaceDetectorProcessor.java</b> and <b>FaceGraphic.java</b> <br>
+I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
 Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
