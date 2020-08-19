@@ -22,7 +22,8 @@ named "jw_model.tflite"<br>
 You can check the output on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 ### Working on...
 MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
-Now working on Calibration. Typically we are going to use 4 or 5 point calibration with SVR.<br>
+Now working on Calibration. Typically we are going to use 5 points calibration with SVR.<br>
+TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
 Since multi output SVR doesn't exist in android, we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
 Training Code will be uploaded soon.
 ### Issues
