@@ -149,11 +149,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
             //This is how you get coordinates, and crop left and right eye
             //Look at https://firebase.google.com/docs/ml-kit/detect-faces#example_2_face_contour_detection for details.
             //We specifically used Eye Contour's point 0 and 8.
-            if (face.getRightEyeOpenProbability() != null) {
+            if (face.getRightEyeOpenProbability() != null && face.getLeftEyeOpenProbability() != null) {
                 float rightEyeOpenProb = face.getRightEyeOpenProbability();
                 float leftEyeOpenProb = face.getLeftEyeOpenProbability();
                 Log.d(TAG, "Right Eye open: "+ rightEyeOpenProb+", Left Eye open: "+leftEyeOpenProb);
-                if(rightEyeOpenProb<0.6 || leftEyeOpenProb <0.6) continue;
+                if(rightEyeOpenProb<0.9 || leftEyeOpenProb <0.9) continue;
+            }
+            else {
+                Log.d(TAG, "Eye open prob is null");
             }
             List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
             List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
