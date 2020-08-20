@@ -47,9 +47,11 @@ import com.google.mlkit.vision.face.FaceDetectorOptions;
 //TF Lite
 import org.tensorflow.lite.Interpreter;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
@@ -65,6 +67,9 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static final String TAG = "MOBED_FaceDetector";
     private static int FPS = 30;
+    private static int SKIP_FRAME = 10;
+    private static int COST = 100;
+    private static int GAMMA = 50;
     public static Interpreter tflite;
     private int resolution = 64;
     private int grid_size = 50;
@@ -79,21 +84,27 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float[][][][] left_4d, right_4d, lefteye_grid, righteye_grid;
 
     private float yhatX =0, yhatY=0;
-    LibSVM svm;
+    LibSVM svmX;
+    LibSVM svmY;
     Button calibration_button;
     private boolean calibration_flag=false;
     Context Fcontext;
     private int calibration_phase = 0;
+    private boolean calibration_model_exist = false;
+    private String basedir;
 
     public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
         this.Fcontext = context;
+        calibration_model_exist = false;
         calibration_button = (Button)((Activity)context).findViewById(R.id.calibration);
         Log.v(MANUAL_TESTING_LOG, "Face detector options: " + options);
         detector = FaceDetection.getClient(options);
         RS = RenderScript.create(context);
         script = new ScriptC_singlesource(RS);
-        svm = new LibSVM();
+        svmX = new LibSVM();
+        svmY = new LibSVM();
+        basedir = Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/";
         calibration_button.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -101,24 +112,24 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 if(!calibration_flag){
                     Log.d(TAG,"Calibration Start");
                     calibration_flag =true;
+                    calibration_model_exist = false;
                     calibration_button.setText(R.string.calibration_end);
-                    File logFile1 = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/trainX.txt");
-                    File logFile2 = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/trainY.txt");
+                    File logFile1 = new File(basedir+"trainX.txt");
+                    File logFile2 = new File(basedir+"trainY.txt");
+                    File svmXfile = new File(basedir+"svmX.model");
+                    File svmYfile = new File(basedir+"svmY.model");
                     if (logFile1.exists()) {
                         try {
                             logFile1.delete();
                             logFile2.delete();
+                            svmXfile.delete();
+                            svmYfile.delete();
                         }
                         catch (Exception e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
                         }
                     }
-                }
-                else {
-                    Log.d(TAG,"Calibration Stop");
-                    calibration_flag =false;
-                    calibration_button.setText(R.string.calibration);
                 }
             }
         });
@@ -281,14 +292,48 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 Map<Integer, Object> outputs = new HashMap<>();
                 outputs.put(0, output);
                 try {
+                    // Clear out Files for Gaze Estimation
+                    if(calibration_model_exist){
+                        File testXfile = new File(basedir+"X.txt");
+                        File testYfile = new File(basedir+"Y.txt");
+                        File outXfile = new File(basedir+"outX.txt");
+                        File outYfile = new File(basedir+"outY.txt");
+                        if (testXfile.exists()) {
+                            testXfile.delete();
+                            testYfile.delete();
+                            outXfile.delete();
+                            outYfile.delete();
+                        }
+                    }
+                    //Run TFLite
                     tflite.runForMultipleInputsOutputs(inputs, outputs);
                     //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
-                    Log.d(TAG, "tflite is working!");
+                    if(calibration_model_exist) {
+                        //Store Values to run libsvm's SVR
+                        DisplayMetrics dm = Fcontext.getResources().getDisplayMetrics();
+                        float normx = yhatX / (float) dm.widthPixels;
+                        float normy = yhatY / (float) dm.heightPixels;
+                        int label = 0;
+                        appendLog(label+" 1:" + normx + " 2:" + normy, "X");
+                        appendLog(label+" 1:" + normx + " 2:" + normy, "Y");
+                        svmX.predict(basedir+"X.txt "+basedir+"svmX.model "+basedir+"outX.txt");
+                        svmY.predict(basedir+"Y.txt "+basedir+"svmY.model "+basedir+"outY.txt");
+                        BufferedReader outputX = new BufferedReader(new FileReader(basedir+"outX.txt"));
+                        float outX = Float.parseFloat(outputX.readLine())*dm.widthPixels;
+                        BufferedReader outputY = new BufferedReader(new FileReader(basedir+"outY.txt"));
+                        float outY = Float.parseFloat(outputY.readLine())*dm.heightPixels;
+                        Log.d(TAG,"outX: "+outX+" outY: "+outY);
+                        yhatX = outX;
+                        yhatY = outY;
+                    }
                 }
                 catch (java.lang.NullPointerException e){
                     Log.e(TAG, "tflite is not working: "+ e);
+                    e.printStackTrace();
+                }
+                catch (Exception e){
                     e.printStackTrace();
                 }
 
@@ -336,54 +381,75 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     calibration_instruction.setVisibility(View.VISIBLE);
                 }
                 else if(calibration_phase<FPS*3) {
-                    calibration_instruction.setVisibility(View.INVISIBLE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                    //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
-                    appendLog("0 1:"+normx+" 2:"+normy,"X");
-                    appendLog("0 1:"+normx+" 2:"+normy,"Y");
+                    //skip first 10 results (eye movement delay)
+                    if (calibration_phase<(FPS*3+SKIP_FRAME)){
+                        calibration_instruction.setVisibility(View.INVISIBLE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                        //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
+                        appendLog("0 1:"+normx+" 2:"+normy,"trainX");
+                        appendLog("0 1:"+normx+" 2:"+normy,"trainY");
+                    }
                 }
                 else if(calibration_phase<FPS*4) {
-                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
-                    //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
-                    appendLog("1 1:"+normx+" 2:"+normy,"X");
-                    appendLog("0 1:"+normx+" 2:"+normy,"Y");
+                    if (calibration_phase<(FPS*4+SKIP_FRAME)) {
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                        //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
+                        appendLog("1 1:" + normx + " 2:" + normy, "trainX");
+                        appendLog("0 1:" + normx + " 2:" + normy, "trainY");
+                    }
                 }
                 else if(calibration_phase<FPS*5) {
-                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                    //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
-                    appendLog("0 1:"+normx+" 2:"+normy,"X");
-                    appendLog("1 1:"+normx+" 2:"+normy,"Y");
+                    if (calibration_phase<(FPS*5+SKIP_FRAME)) {
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                        //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
+                        appendLog("0 1:" + normx + " 2:" + normy, "trainX");
+                        appendLog("1 1:" + normx + " 2:" + normy, "trainY");
+                    }
                 }
                 else if(calibration_phase<FPS*6) {
-                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
-                    //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
-                    appendLog("1 1:"+normx+" 2:"+normy,"X");
-                    appendLog("1 1:"+normx+" 2:"+normy,"Y");
+                    if (calibration_phase<(FPS*6+SKIP_FRAME)) {
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                        //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
+                        appendLog("1 1:" + normx + " 2:" + normy, "trainX");
+                        appendLog("1 1:" + normx + " 2:" + normy, "trainY");
+                    }
                 }
                 else if(calibration_phase<FPS*7) {
-                    params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                    params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                    //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
-                    appendLog("0.5 1:"+normx+" 2:"+normy,"X");
-                    appendLog("0.5 1:"+normx+" 2:"+normy,"Y");
+                    if (calibration_phase<(FPS*7+SKIP_FRAME)) {
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                        //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
+                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
+                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
+                    }
                 }
                 else if(calibration_phase<FPS*8) {
-                    // TODO Loading GIF
-                    calibration_flag=false;
+                    if(calibration_phase<FPS*8+1) {
+                        calibration_flag = false;
+                        // TODO Loading GIF and Training SVR and Deploy it
+                        // libsvm train option "-s 3 -t 2 -c COST -g GAMMA" will do the magic probably
+                        String svmXdir = basedir + "trainX.txt";
+                        String svmYdir = basedir + "trainY.txt";
+                        svmX.train("-s 3 -t 2 -c "+COST+" -g "+GAMMA+" " + svmXdir + " " + basedir + "svmX.model");
+                        svmY.train("-s 3 -t 2 -c "+COST+" -g "+GAMMA+" " + svmYdir + " " + basedir + "svmY.model");
+                        // Calibration Done
+                        calibration_model_exist = true;
+                    }
+                    else calibration_point.setVisibility(View.INVISIBLE);
                 }
                 calibration_phase++;
                 calibration_point.setLayoutParams(params);
@@ -433,7 +499,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
      * for libsvm trainset creation
      * */
     public void appendLog(String text, String option) {
-        File logFile = new File(Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/train"+option+".txt");
+        File logFile = new File(basedir+option+".txt");
         if (!logFile.exists()) {
             try {
                 if(logFile.createNewFile()){
