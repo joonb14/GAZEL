@@ -26,6 +26,7 @@ MobiGaze uses Personalized model. This example is based on my Data. So would not
 Now working on Calibration. Typically we are going to use 5 points calibration with SVR.<br>
 TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
 Since multi output SVR doesn't exist in android, we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
+However the problem is... I cannot get the right cost and gamma for SVR... <br>
 Training Code will be uploaded soon.
 ### Issues
 TensorFlow Lite Conversion. Before you load your tflite model, you must check the input details to make sure input order is correct.<br>
