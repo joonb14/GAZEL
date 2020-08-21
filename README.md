@@ -40,25 +40,15 @@ tflite.get_input_details()
 example output will be
 <pre><code>[{'name': 'left_eye',
   'index': 1,
-  'shape': array([  1, 224, 224,   1], dtype=int32),
-  'dtype': numpy.float32,
-  'quantization': (0.0, 0)},
- {'name': 'right_eye_grid',
-  'index': 174,
-  'shape': array([ 1, 50, 50,  1], dtype=int32),
+  'shape': array([ 1, 64, 64,  1], dtype=int32),
   'dtype': numpy.float32,
   'quantization': (0.0, 0)},
  {'name': 'right_eye',
-  'index': 173,
-  'shape': array([  1, 224, 224,   1], dtype=int32),
-  'dtype': numpy.float32,
-  'quantization': (0.0, 0)},
- {'name': 'left_eye_grid',
-  'index': 2,
-  'shape': array([ 1, 50, 50,  1], dtype=int32),
+  'index': 39,
+  'shape': array([ 1, 64, 64,  1], dtype=int32),
   'dtype': numpy.float32,
   'quantization': (0.0, 0)}]
 </code></pre>
 Then reorder your inputs in <b>FaceDetectorProcessor.java</b>
-<pre><code>float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid}; //reorder the parameters
+<pre><code>float[][][][][] inputs = new float[][][][][]{left_4d, right_4d}; // make sure the order is correct
 </code></pre>
