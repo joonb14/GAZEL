@@ -70,6 +70,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static int SKIP_FRAME = 10;
     private static int COST = 100;
     private static int GAMMA = 50;
+    private static float EYE_OPEN_PROB = 0.4f;
     public static Interpreter tflite;
     private int resolution = 64;
     private int grid_size = 50;
@@ -164,36 +165,36 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 float rightEyeOpenProb = face.getRightEyeOpenProbability();
                 float leftEyeOpenProb = face.getLeftEyeOpenProbability();
                 Log.d(TAG, "Right Eye open: "+ rightEyeOpenProb+", Left Eye open: "+leftEyeOpenProb);
-                if(rightEyeOpenProb<0.9 || leftEyeOpenProb <0.9) continue;
+                if(rightEyeOpenProb<EYE_OPEN_PROB || leftEyeOpenProb <EYE_OPEN_PROB) continue;
             }
             else {
                 Log.d(TAG, "Eye open prob is null");
             }
-            List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
-            List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
-            float righteye_leftx = rightEyeContour.get(0).x;
-            float righteye_lefty = rightEyeContour.get(0).y;
-            float righteye_rightx = rightEyeContour.get(8).x;
-            float righteye_righty = rightEyeContour.get(8).y;
-            float lefteye_leftx = leftEyeContour.get(0).x;
-            float lefteye_lefty = leftEyeContour.get(0).y;
-            float lefteye_rightx = leftEyeContour.get(8).x;
-            float lefteye_righty = leftEyeContour.get(8).y;
-            float righteye_centerx = (righteye_leftx + righteye_rightx)/2.0f;
-            float righteye_centery = (righteye_lefty + righteye_righty)/2.0f;
-            float lefteye_centerx = (lefteye_leftx + lefteye_rightx)/2.0f;
-            float lefteye_centery = (lefteye_lefty + lefteye_righty)/2.0f;
-            float lefteyeboxsize = (lefteye_centerx-lefteye_leftx)*EYE_BOX_RATIO;
-            float righteyeboxsize = (righteye_centerx-righteye_leftx)*EYE_BOX_RATIO;
-            leftEyeleft = lefteye_centerx - lefteyeboxsize;
-            leftEyetop = lefteye_centery + lefteyeboxsize;
-            leftEyeright = lefteye_centerx + lefteyeboxsize;
-            leftEyebottom = lefteye_centery - lefteyeboxsize;
-            rightEyeleft = righteye_centerx - righteyeboxsize;
-            rightEyetop = righteye_centery + righteyeboxsize;
-            rightEyeright = righteye_centerx + righteyeboxsize;
-            rightEyebottom = righteye_centery - righteyeboxsize;
             try {
+                List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
+                List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
+                float righteye_leftx = rightEyeContour.get(0).x;
+                float righteye_lefty = rightEyeContour.get(0).y;
+                float righteye_rightx = rightEyeContour.get(8).x;
+                float righteye_righty = rightEyeContour.get(8).y;
+                float lefteye_leftx = leftEyeContour.get(0).x;
+                float lefteye_lefty = leftEyeContour.get(0).y;
+                float lefteye_rightx = leftEyeContour.get(8).x;
+                float lefteye_righty = leftEyeContour.get(8).y;
+                float righteye_centerx = (righteye_leftx + righteye_rightx)/2.0f;
+                float righteye_centery = (righteye_lefty + righteye_righty)/2.0f;
+                float lefteye_centerx = (lefteye_leftx + lefteye_rightx)/2.0f;
+                float lefteye_centery = (lefteye_lefty + lefteye_righty)/2.0f;
+                float lefteyeboxsize = (lefteye_centerx-lefteye_leftx)*EYE_BOX_RATIO;
+                float righteyeboxsize = (righteye_centerx-righteye_leftx)*EYE_BOX_RATIO;
+                leftEyeleft = lefteye_centerx - lefteyeboxsize;
+                leftEyetop = lefteye_centery + lefteyeboxsize;
+                leftEyeright = lefteye_centerx + lefteyeboxsize;
+                leftEyebottom = lefteye_centery - lefteyeboxsize;
+                rightEyeleft = righteye_centerx - righteyeboxsize;
+                rightEyetop = righteye_centery + righteyeboxsize;
+                rightEyeright = righteye_centerx + righteyeboxsize;
+                rightEyebottom = righteye_centery - righteyeboxsize;
                 Bitmap leftBitmap=Bitmap.createBitmap(image, (int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2));
                 Bitmap rightBitmap=Bitmap.createBitmap(image, (int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2));
                 if (leftBitmap.getHeight() > resolution){
@@ -243,41 +244,42 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     }
                 }
 
-                /**
-                 * Eye Grids
-                 * */
-                int image_width = image.getWidth();
-                int image_height = image.getHeight();
-                //left, bottom, width, height
-                float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
-                float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
-                float w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
-                float h_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_height));
-
-                lefteye_grid = new float[1][grid_size][grid_size][1];
-                for(int h=0; h<grid_size; h++){
-                    for(int w=0; w<grid_size; w++) {
-                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-                            lefteye_grid[0][h][w][0] = 1;
-                        }
-                        else lefteye_grid[0][h][w][0] = 0;
-                    }
-                }
-
-                w_start = Math.round(grid_size*(rightEyeleft/(float)image_width));
-                h_start = Math.round(grid_size*(rightEyebottom/(float)image_height));
-                w_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_width));
-                h_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_height));
-
-                righteye_grid = new float[1][grid_size][grid_size][1];
-                for(int h=0; h<grid_size; h++){
-                    for(int w=0; w<grid_size; w++) {
-                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-                            righteye_grid[0][h][w][0] = 1;
-                        }
-                        else righteye_grid[0][h][w][0] = 0;
-                    }
-                }
+//                /**
+//                 * Eye Grids
+//                 * Use to use these as inputs, but recognized just using eyes results in better results
+//                 * */
+//                int image_width = image.getWidth();
+//                int image_height = image.getHeight();
+//                //left, bottom, width, height
+//                float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
+//                float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
+//                float w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
+//                float h_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_height));
+//
+//                lefteye_grid = new float[1][grid_size][grid_size][1];
+//                for(int h=0; h<grid_size; h++){
+//                    for(int w=0; w<grid_size; w++) {
+//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+//                            lefteye_grid[0][h][w][0] = 1;
+//                        }
+//                        else lefteye_grid[0][h][w][0] = 0;
+//                    }
+//                }
+//
+//                w_start = Math.round(grid_size*(rightEyeleft/(float)image_width));
+//                h_start = Math.round(grid_size*(rightEyebottom/(float)image_height));
+//                w_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_width));
+//                h_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_height));
+//
+//                righteye_grid = new float[1][grid_size][grid_size][1];
+//                for(int h=0; h<grid_size; h++){
+//                    for(int w=0; w<grid_size; w++) {
+//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+//                            righteye_grid[0][h][w][0] = 1;
+//                        }
+//                        else righteye_grid[0][h][w][0] = 0;
+//                    }
+//                }
 
                 /**
                  * Wrap them up to use them as input for TensorFlow Lite model
@@ -285,7 +287,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 //For jw_model.tflite
                 //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
                 //For ykmodel.tflite
-                float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
+                //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
+                //For onlyeyes_model.tflite
+                float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
@@ -355,6 +359,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
             }
             catch (java.lang.IllegalArgumentException e) {
                 Log.e(TAG, "java.lang.IllegalArgumentException");
+                e.printStackTrace();
+            }
+            catch (Exception e){
                 e.printStackTrace();
             }
             Log.d(TAG, "Bitmap created");

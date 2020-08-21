@@ -102,34 +102,38 @@ public class FaceGraphic extends Graphic {
         canvas.drawCircle(x, y, FACE_POSITION_RADIUS, gazePointPaint);
 
         if(showEyes) {
-            List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
-            List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
-            float righteye_leftx = translateX(rightEyeContour.get(0).x);
-            float righteye_lefty = translateY(rightEyeContour.get(0).y);
-            float righteye_rightx = translateX(rightEyeContour.get(8).x);
-            float righteye_righty = translateY(rightEyeContour.get(8).y);
-            float lefteye_leftx = translateX(leftEyeContour.get(0).x);
-            float lefteye_lefty = translateY(leftEyeContour.get(0).y);
-            float lefteye_rightx = translateX(leftEyeContour.get(8).x);
-            float lefteye_righty = translateY(leftEyeContour.get(8).y);
+            try {
+                List<PointF> leftEyeContour = face.getContour(FaceContour.LEFT_EYE).getPoints();
+                List<PointF> rightEyeContour = face.getContour(FaceContour.RIGHT_EYE).getPoints();
+                float righteye_leftx = translateX(rightEyeContour.get(0).x);
+                float righteye_lefty = translateY(rightEyeContour.get(0).y);
+                float righteye_rightx = translateX(rightEyeContour.get(8).x);
+                float righteye_righty = translateY(rightEyeContour.get(8).y);
+                float lefteye_leftx = translateX(leftEyeContour.get(0).x);
+                float lefteye_lefty = translateY(leftEyeContour.get(0).y);
+                float lefteye_rightx = translateX(leftEyeContour.get(8).x);
+                float lefteye_righty = translateY(leftEyeContour.get(8).y);
 
-            float righteye_centerx = (righteye_leftx + righteye_rightx) / 2.0f;
-            float righteye_centery = (righteye_lefty + righteye_righty) / 2.0f;
-            float lefteye_centerx = (lefteye_leftx + lefteye_rightx) / 2.0f;
-            float lefteye_centery = (lefteye_lefty + lefteye_righty) / 2.0f;
-            float lefteyeboxsize = (lefteye_centerx - lefteye_leftx) * EYE_BOX_RATIO;
-            float righteyeboxsize = (righteye_centerx - righteye_leftx) * EYE_BOX_RATIO;
-            leftEyeleft = lefteye_centerx - lefteyeboxsize;
-            leftEyetop = lefteye_centery + lefteyeboxsize;
-            leftEyeright = lefteye_centerx + lefteyeboxsize;
-            leftEyebottom = lefteye_centery - lefteyeboxsize;
-            rightEyeleft = righteye_centerx - righteyeboxsize;
-            rightEyetop = righteye_centery + righteyeboxsize;
-            rightEyeright = righteye_centerx + righteyeboxsize;
-            rightEyebottom = righteye_centery - righteyeboxsize;
-            canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
-            canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
-
+                float righteye_centerx = (righteye_leftx + righteye_rightx) / 2.0f;
+                float righteye_centery = (righteye_lefty + righteye_righty) / 2.0f;
+                float lefteye_centerx = (lefteye_leftx + lefteye_rightx) / 2.0f;
+                float lefteye_centery = (lefteye_lefty + lefteye_righty) / 2.0f;
+                float lefteyeboxsize = (lefteye_centerx - lefteye_leftx) * EYE_BOX_RATIO;
+                float righteyeboxsize = (righteye_centerx - righteye_leftx) * EYE_BOX_RATIO;
+                leftEyeleft = lefteye_centerx - lefteyeboxsize;
+                leftEyetop = lefteye_centery + lefteyeboxsize;
+                leftEyeright = lefteye_centerx + lefteyeboxsize;
+                leftEyebottom = lefteye_centery - lefteyeboxsize;
+                rightEyeleft = righteye_centerx - righteyeboxsize;
+                rightEyetop = righteye_centery + righteyeboxsize;
+                rightEyeright = righteye_centerx + righteyeboxsize;
+                rightEyebottom = righteye_centery - righteyeboxsize;
+                canvas.drawRect(rightEyeleft, rightEyetop, rightEyeright, rightEyebottom, rightEyePaint);
+                canvas.drawRect(leftEyeleft, leftEyetop, leftEyeright, leftEyebottom, leftEyePaint);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
