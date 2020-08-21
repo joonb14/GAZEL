@@ -1,12 +1,13 @@
 # MobiGaze
 This work is based on Google's ML kit Sample(2020, June Version)<br>
 https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br><br>
+inspired by: <a href="https://gazecapture.csail.mit.edu/">Eye Tracking for Everyone</a>
 Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
 <a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
 ### Before Cloning to Your Directory
-Now we are using lighter model ykmodel.tflite(14MB) so in case you want to use ResNet-18, 224x224x1 input size version, follow instructions below<br>
+Now we are using lighter model onlyeyes_model.tflite(17MB) so in case you want to use ResNet-18, 224x224x1 input size version, follow instructions below<br>
 This work requires <a href="https://git-lfs.github.com/"><b>git-lfs</b></a> so you must install it first. (jw_model.tflite file exceeds 100MB...)<br>
 After installing git-lfs, on the Directory you want to clone this work, <br>
 <pre><code>$ git lfs install
@@ -19,7 +20,7 @@ Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
 stored in asset folder. Created with Keras, converted to tflite.<br>
-named "ykmodel.tflite"(we also have ResNet-18 model named "jw_model.tflite")<br>
+named "onlyeyes_model.tflite"(we also have ResNet-18 model named "jw_model.tflite"(224x224x1 input) and CNN model named "ykmodel.tflite"(64x64x1 input))<br>
 You can check the output on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 ### Working on...
 MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
