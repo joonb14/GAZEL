@@ -1,7 +1,7 @@
 # MobiGaze
 This work is based on Google's ML kit Sample(2020, June Version)<br>
 https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br>
-inspired by: <a href="https://gazecapture.csail.mit.edu/">Eye Tracking for Everyone</a><br><br>
+inspired by: <a href="https://gazecapture.csail.mit.edu/">Eye Tracking for Everyone(2016 CVPR)</a><br><br>
 Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
