@@ -69,8 +69,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static int FPS = 30;
     private static int SKIP_FRAME = 10;
     private static int COST = 100;
-    private static int GAMMA = 50;
-    private static float EYE_OPEN_PROB = 0.4f;
+    private static int GAMMA = 20;
+    private static float EYE_OPEN_PROB = 0.0f;
     public static Interpreter tflite;
     private int resolution = 64;
     private int grid_size = 50;
@@ -389,8 +389,19 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 }
                 else if(calibration_phase<FPS*3) {
                     //skip first 10 results (eye movement delay)
+                    calibration_instruction.setVisibility(View.INVISIBLE);
                     if (calibration_phase<(FPS*3+SKIP_FRAME)){
-                        calibration_instruction.setVisibility(View.INVISIBLE);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+                        //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
+                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
+                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
+                    }
+                }
+                else if(calibration_phase<FPS*4) {
+                    if (calibration_phase<(FPS*4+SKIP_FRAME)) {
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
@@ -400,8 +411,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         appendLog("0 1:"+normx+" 2:"+normy,"trainY");
                     }
                 }
-                else if(calibration_phase<FPS*4) {
-                    if (calibration_phase<(FPS*4+SKIP_FRAME)) {
+                else if(calibration_phase<FPS*5) {
+                    if (calibration_phase<(FPS*5+SKIP_FRAME)) {
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
@@ -411,8 +422,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         appendLog("0 1:" + normx + " 2:" + normy, "trainY");
                     }
                 }
-                else if(calibration_phase<FPS*5) {
-                    if (calibration_phase<(FPS*5+SKIP_FRAME)) {
+                else if(calibration_phase<FPS*6) {
+                    if (calibration_phase<(FPS*6+SKIP_FRAME)) {
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
@@ -422,8 +433,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
                     }
                 }
-                else if(calibration_phase<FPS*6) {
-                    if (calibration_phase<(FPS*6+SKIP_FRAME)) {
+                else if(calibration_phase<FPS*7) {
+                    if (calibration_phase<(FPS*7+SKIP_FRAME)) {
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
@@ -431,17 +442,6 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
-                    }
-                }
-                else if(calibration_phase<FPS*7) {
-                    if (calibration_phase<(FPS*7+SKIP_FRAME)) {
-                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                        //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
-                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
-                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
                     }
                 }
                 else if(calibration_phase<FPS*8) {
