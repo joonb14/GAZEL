@@ -70,7 +70,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private static int SKIP_FRAME = 10;
     private static int COST = 100;
     private static int GAMMA = 20;
-    private static float EYE_OPEN_PROB = 0.0f;
+    private static float EYE_OPEN_PROB = 0.56f; //empirical value
     public static Interpreter tflite;
     private int resolution = 64;
     private int grid_size = 50;
@@ -165,7 +165,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 float rightEyeOpenProb = face.getRightEyeOpenProbability();
                 float leftEyeOpenProb = face.getLeftEyeOpenProbability();
                 Log.d(TAG, "Right Eye open: "+ rightEyeOpenProb+", Left Eye open: "+leftEyeOpenProb);
-                if(rightEyeOpenProb<EYE_OPEN_PROB || leftEyeOpenProb <EYE_OPEN_PROB) continue;
+                if(/*rightEyeOpenProb<EYE_OPEN_PROB || */leftEyeOpenProb <EYE_OPEN_PROB) continue; // in my case my right eye is too small for the use
             }
             else {
                 Log.d(TAG, "Eye open prob is null");
