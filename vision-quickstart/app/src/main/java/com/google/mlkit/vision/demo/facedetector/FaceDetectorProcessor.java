@@ -165,7 +165,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 float rightEyeOpenProb = face.getRightEyeOpenProbability();
                 float leftEyeOpenProb = face.getLeftEyeOpenProbability();
                 Log.d(TAG, "Right Eye open: "+ rightEyeOpenProb+", Left Eye open: "+leftEyeOpenProb);
-                if(/*rightEyeOpenProb<EYE_OPEN_PROB || */leftEyeOpenProb <EYE_OPEN_PROB) continue; // in my case my right eye is too small for the use
+                if(rightEyeOpenProb<EYE_OPEN_PROB /*|| leftEyeOpenProb <EYE_OPEN_PROB*/) continue; // in my case my left eye is too small for the use
             }
             else {
                 Log.d(TAG, "Eye open prob is null");
@@ -387,41 +387,41 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     calibration_point.setVisibility(View.INVISIBLE);
                     calibration_instruction.setVisibility(View.VISIBLE);
                 }
-                else if(calibration_phase<FPS*3) {
-                    //skip first 10 results (eye movement delay)
-                    calibration_instruction.setVisibility(View.INVISIBLE);
-                    if (calibration_phase<(FPS*3+SKIP_FRAME)){
-                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                        //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
-                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
-                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
-                    }
-                }
-                else if(calibration_phase<FPS*4) {
-                    if (calibration_phase<(FPS*4+SKIP_FRAME)) {
-                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-                        //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
-                        appendLog("0 1:"+normx+" 2:"+normy,"trainX");
-                        appendLog("0 1:"+normx+" 2:"+normy,"trainY");
-                    }
-                }
-                else if(calibration_phase<FPS*5) {
-                    if (calibration_phase<(FPS*5+SKIP_FRAME)) {
-                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
-                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
-                        //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
-                        appendLog("1 1:" + normx + " 2:" + normy, "trainX");
-                        appendLog("0 1:" + normx + " 2:" + normy, "trainY");
-                    }
-                }
+//                else if(calibration_phase<FPS*3) {
+//                    //skip first 10 results (eye movement delay)
+//                    calibration_instruction.setVisibility(View.INVISIBLE);
+//                    if (calibration_phase<(FPS*3+SKIP_FRAME)){
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+//                        //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
+//                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
+//                        appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
+//                    }
+//                }
+//                else if(calibration_phase<FPS*4) {
+//                    if (calibration_phase<(FPS*4+SKIP_FRAME)) {
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+//                        //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
+//                        appendLog("0 1:"+normx+" 2:"+normy,"trainX");
+//                        appendLog("0 1:"+normx+" 2:"+normy,"trainY");
+//                    }
+//                }
+//                else if(calibration_phase<FPS*5) {
+//                    if (calibration_phase<(FPS*5+SKIP_FRAME)) {
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
+//                        params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+//                        //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
+//                        appendLog("1 1:" + normx + " 2:" + normy, "trainX");
+//                        appendLog("0 1:" + normx + " 2:" + normy, "trainY");
+//                    }
+//                }
                 else if(calibration_phase<FPS*6) {
                     if (calibration_phase<(FPS*6+SKIP_FRAME)) {
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
