@@ -289,6 +289,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 //For ykmodel.tflite
                 //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
                 //For onlyeyes_model.tflite
+                //float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
+                //For jw_onlyeyes_model.tflite
+                //float[][][][][] inputs = new float[][][][][]{right_4d, left_4d};
+                //For jw_only_eyes_all_model.tflite
                 float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
