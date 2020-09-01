@@ -23,6 +23,7 @@ import android.graphics.PointF;
 import androidx.renderscript.Allocation;
 import androidx.renderscript.RenderScript;
 
+import android.graphics.Rect;
 import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -36,6 +37,7 @@ import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.demo.GraphicOverlay;
+import com.google.mlkit.vision.demo.Queue;
 import com.google.mlkit.vision.demo.R;
 import com.google.mlkit.vision.demo.VisionProcessorBase;
 import com.google.mlkit.vision.face.Face;
@@ -43,6 +45,7 @@ import com.google.mlkit.vision.face.FaceContour;
 import com.google.mlkit.vision.face.FaceDetection;
 import com.google.mlkit.vision.face.FaceDetector;
 import com.google.mlkit.vision.face.FaceDetectorOptions;
+import com.google.mlkit.vision.face.FaceLandmark;
 
 //TF Lite
 import org.tensorflow.lite.Interpreter;
@@ -65,24 +68,29 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
  * Face Detector Demo.
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
+    // Constant Values
+    private final boolean THREE_CHANNEL = false;
+    private final boolean calibration_mode_SVR = true;
+    private static final float EYE_BOX_RATIO = 1.4f;
+    private final int resolution = 64;
+    private final int grid_size = 25;
+    private final int FPS = 30;
+    private final int SKIP_FRAME = 10;
+    private final int COST = 100;
+    private final int GAMMA = 20;
+    private final int QUEUE_SIZE = 20;
+    private final float EYE_OPEN_PROB = 0.0f; //empirical value
     private static final String TAG = "MOBED_FaceDetector";
-    private static int FPS = 30;
-    private static int SKIP_FRAME = 10;
-    private static int COST = 100;
-    private static int GAMMA = 20;
-    private static float EYE_OPEN_PROB = 0.56f; //empirical value
+
     public static Interpreter tflite;
-    private int resolution = 64;
-    private int grid_size = 50;
     public static Bitmap image;
     private final FaceDetector detector;
     public float leftEyeleft, leftEyetop, leftEyeright, leftEyebottom;
     public float rightEyeleft, rightEyetop, rightEyeright, rightEyebottom;
     private RenderScript RS;
     private ScriptC_singlesource script;
-    private static final float EYE_BOX_RATIO = 1.4f;
 
-    private float[][][][] left_4d, right_4d, lefteye_grid, righteye_grid;
+    private float[][][][] left_4d, right_4d, face_grid, face_input, lefteye_grid, righteye_grid;
 
     private float yhatX =0, yhatY=0;
     LibSVM svmX;
@@ -93,6 +101,20 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private int calibration_phase = 0;
     private boolean calibration_model_exist = false;
     private String basedir;
+
+    private Queue Xqueue, Yqueue;
+    private float moving_average_X, moving_average_Y;
+
+    private float  top_left_mean_X, top_left_mean_Y;
+    private float top_right_mean_X, top_right_mean_Y;
+    private float bottom_left_mean_X, bottom_left_mean_Y;
+    private float bottom_right_mean_X, bottom_right_mean_Y;
+    private float center_mean_X, center_mean_Y;
+
+    private float top_left_offset_X, top_left_offset_Y;
+    private float bottom_right_offset_X, bottom_right_offset_Y;
+    private float center_offset_X, center_offset_Y;
+    private float calib_X, calib_Y;
 
     public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
@@ -106,6 +128,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
         svmX = new LibSVM();
         svmY = new LibSVM();
         basedir = Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/";
+        Xqueue = new Queue(QUEUE_SIZE);
+        Yqueue = new Queue(QUEUE_SIZE);
         calibration_button.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -205,14 +229,16 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 }
                 //Renderscript converts RGBA value to YUV's Y value.
                 //After RenderScript, Y value will be stored in Red pixel value
-                Allocation inputAllocation = Allocation.createFromBitmap( RS, leftBitmap);
-                Allocation outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
-                script.invoke_process(inputAllocation, outputAllocation);
-                outputAllocation.copyTo(leftBitmap);
-                inputAllocation = Allocation.createFromBitmap( RS, rightBitmap);
-                outputAllocation = Allocation.createTyped( RS, inputAllocation.getType());
-                script.invoke_process(inputAllocation, outputAllocation);
-                outputAllocation.copyTo(rightBitmap);
+                if (!THREE_CHANNEL) {
+                    Allocation inputAllocation = Allocation.createFromBitmap(RS, leftBitmap);
+                    Allocation outputAllocation = Allocation.createTyped(RS, inputAllocation.getType());
+                    script.invoke_process(inputAllocation, outputAllocation);
+                    outputAllocation.copyTo(leftBitmap);
+                    inputAllocation = Allocation.createFromBitmap(RS, rightBitmap);
+                    outputAllocation = Allocation.createTyped(RS, inputAllocation.getType());
+                    script.invoke_process(inputAllocation, outputAllocation);
+                    outputAllocation.copyTo(rightBitmap);
+                }
                 if (leftBitmap.getHeight() < resolution){
                     leftBitmap = Bitmap.createScaledBitmap(leftBitmap, resolution,resolution,false);
                 }
@@ -225,24 +251,82 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                  * Left Eye
                  * */
                 leftBitmap.getPixels(eye,0,resolution,0,0,resolution,resolution);
-                left_4d = new float[1][resolution][resolution][1];
+                if(!THREE_CHANNEL) {
+                    left_4d = new float[1][resolution][resolution][1];
+                }
+                else left_4d = new float[1][resolution][resolution][3];
                 for(int y = 0; y < resolution; y++) {
                     for (int x = 0; x < resolution; x++) {
                         int index = y * resolution + x;
                         left_4d[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
+                        if(THREE_CHANNEL) {
+                            left_4d[0][y][x][1] = ((eye[index] & 0x0000FF00) >> 8)/(float)255;;
+                            left_4d[0][y][x][2] = (eye[index] & 0x000000FF)/(float)255;;
+                        }
                     }
                 }
                 /**
                  * Right Eye
                  * */
                 rightBitmap.getPixels(eye,0,resolution,0,0,resolution,resolution);
-                right_4d = new float[1][resolution][resolution][1];
+                if(!THREE_CHANNEL) {
+                    right_4d = new float[1][resolution][resolution][1];
+                }
+                else right_4d = new float[1][resolution][resolution][3];
                 for(int y = 0; y < resolution; y++) {
                     for (int x = 0; x < resolution; x++) {
                         int index = y * resolution + x;
                         right_4d[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
+                        if(THREE_CHANNEL) {
+                            right_4d[0][y][x][1] = ((eye[index] & 0x0000FF00) >> 8)/(float)255;;
+                            right_4d[0][y][x][2] = (eye[index] & 0x000000FF)/(float)255;;
+                        }
                     }
                 }
+//                /**
+//                 * Face
+//                 * */
+//                Rect facePos = face.getBoundingBox();
+//                float faceboxWsize = facePos.right - facePos.left;
+//                float faceboxHsize = facePos.bottom - facePos.top;
+//                Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize);
+//                faceBitmap = Bitmap.createScaledBitmap(faceBitmap, resolution,resolution,false);
+//                int[] face_pix = new int[resolution*resolution];
+//                faceBitmap.getPixels(face_pix,0,resolution,0,0,resolution,resolution);
+//                if(!THREE_CHANNEL) {
+//                    face_input = new float[1][resolution][resolution][1];
+//                }
+//                else face_input = new float[1][resolution][resolution][3];
+//                for(int y = 0; y < resolution; y++) {
+//                    for (int x = 0; x < resolution; x++) {
+//                        int index = y * resolution + x;
+//                        face_input[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
+//                        if(THREE_CHANNEL) {
+//                            face_input[0][y][x][1] = ((eye[index] & 0x0000FF00) >> 8)/(float)255;;
+//                            face_input[0][y][x][2] = (eye[index] & 0x000000FF)/(float)255;;
+//                        }
+//                    }
+//                }
+//                /**
+//                 * Face Grid
+//                 * */
+//                int image_width = image.getWidth();
+//                int image_height = image.getHeight();
+//                //left, bottom, width, height
+//                float w_start = Math.round(grid_size*(facePos.left/(float)image_width));
+//                float h_start = Math.round(grid_size*(facePos.top/(float)image_height));
+//                float w_num = Math.round(grid_size*((faceboxWsize)/(float)image_width));
+//                float h_num = Math.round(grid_size*((faceboxHsize)/(float)image_height));
+//
+//                face_grid = new float[1][grid_size][grid_size][1];
+//                for(int h=0; h<grid_size; h++){
+//                    for(int w=0; w<grid_size; w++) {
+//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+//                            face_grid[0][h][w][0] = 1;
+//                        }
+//                        else face_grid[0][h][w][0] = 0;
+//                    }
+//                }
 
 //                /**
 //                 * Eye Grids
@@ -288,12 +372,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
                 //For ykmodel.tflite
                 //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
-                //For onlyeyes_model.tflite
-                //float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
+                //For onlyeyes_model.tflite jw_only_eyes_all_model.tflite
+                float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
                 //For jw_onlyeyes_model.tflite
                 //float[][][][][] inputs = new float[][][][][]{right_4d, left_4d};
-                //For jw_only_eyes_all_model.tflite
-                float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
@@ -318,23 +400,67 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
+
+
+                    /**
+                     * MOBED Moving Average Implementation
+                     * Using Queue
+                     */
+                    if(!Xqueue.isFull()){
+                        Xqueue.queueEnqueue(yhatX);
+                        Yqueue.queueEnqueue(yhatY);
+                        if(Xqueue.isFull()) {
+                            float xSum = 0, ySum = 0;
+                            for (int i = 0; i < Xqueue.capacity; i++) {
+                                xSum += Xqueue.queue[i];
+                                ySum += Yqueue.queue[i];
+                            }
+                            moving_average_X = xSum / (float) QUEUE_SIZE;
+                            moving_average_Y = ySum / (float) QUEUE_SIZE;
+                        }
+                    }
+                    else {
+                        Xqueue.queueDequeue();
+                        Yqueue.queueDequeue();
+                        Xqueue.queueEnqueue(yhatX);
+                        Yqueue.queueEnqueue(yhatY);
+                        moving_average_X = moving_average_X*0.6f+yhatX*0.4f;
+                        moving_average_Y = moving_average_Y*0.6f+yhatY*0.4f;
+                        //Log.d(TAG,"Queue("+moving_average_X+","+moving_average_Y+")");
+                    }
+
+                    /**
+                     * Plotting Dots
+                     * */
+                    float inputX = moving_average_X;
+                    float inputY = moving_average_Y;
+                    DisplayMetrics dm = Fcontext.getResources().getDisplayMetrics();
                     if(calibration_model_exist) {
-                        //Store Values to run libsvm's SVR
-                        DisplayMetrics dm = Fcontext.getResources().getDisplayMetrics();
-                        float normx = yhatX / (float) dm.widthPixels;
-                        float normy = yhatY / (float) dm.heightPixels;
-                        int label = 0;
-                        appendLog(label+" 1:" + normx + " 2:" + normy, "X");
-                        appendLog(label+" 1:" + normx + " 2:" + normy, "Y");
-                        svmX.predict(basedir+"X.txt "+basedir+"svmX.model "+basedir+"outX.txt");
-                        svmY.predict(basedir+"Y.txt "+basedir+"svmY.model "+basedir+"outY.txt");
-                        BufferedReader outputX = new BufferedReader(new FileReader(basedir+"outX.txt"));
-                        float outX = Float.parseFloat(outputX.readLine())*dm.widthPixels;
-                        BufferedReader outputY = new BufferedReader(new FileReader(basedir+"outY.txt"));
-                        float outY = Float.parseFloat(outputY.readLine())*dm.heightPixels;
-                        Log.d(TAG,"outX: "+outX+" outY: "+outY);
-                        yhatX = outX;
-                        yhatY = outY;
+                        if(calibration_mode_SVR) {
+                            //Store Values to run libsvm's SVR
+                            float normx = yhatX / (float) dm.widthPixels;
+                            float normy = yhatY / (float) dm.heightPixels;
+                            int label = 0;
+                            appendLog(label + " 1:" + normx + " 2:" + normy, "X");
+                            appendLog(label + " 1:" + normx + " 2:" + normy, "Y");
+                            svmX.predict(basedir + "X.txt " + basedir + "svmX.model " + basedir + "outX.txt");
+                            svmY.predict(basedir + "Y.txt " + basedir + "svmY.model " + basedir + "outY.txt");
+                            BufferedReader outputX = new BufferedReader(new FileReader(basedir + "outX.txt"));
+                            float outX = Float.parseFloat(outputX.readLine()) * dm.widthPixels;
+                            BufferedReader outputY = new BufferedReader(new FileReader(basedir + "outY.txt"));
+                            float outY = Float.parseFloat(outputY.readLine()) * dm.heightPixels;
+                            Log.d(TAG, "outX: " + outX + " outY: " + outY);
+                            calib_X = outX;
+                            calib_Y = outY;
+                        }
+                        else {
+                            // Calcuate Calibration Points
+                            float len_X = (float) dm.widthPixels;
+                            float len_Y = (float) dm.heightPixels;
+                            calib_X=((inputX-center_offset_X)/(bottom_right_offset_X-top_left_offset_X))*len_X+center_offset_X;
+                            calib_Y=((inputY-center_offset_Y)/(bottom_right_offset_Y-top_left_offset_Y))*len_Y+center_offset_Y;
+                        }
+                        Log.d("MOBED_GazePoint_Calib","x:"+calib_X+" y:"+calib_Y);
                     }
                 }
                 catch (java.lang.NullPointerException e){
@@ -369,16 +495,19 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 e.printStackTrace();
             }
             Log.d(TAG, "Bitmap created");
+
             /**
              * MOBED Calibration Implementation
              * Made For Runtime Calibration
              * 5 - points Calibration (TopLeft, TopRight, BottomLeft, BottomRight, Center)
              * */
+            float inputX = moving_average_X;
+            float inputY = moving_average_Y;
             if(calibration_flag){
                 DisplayMetrics dm = Fcontext.getResources().getDisplayMetrics();
                 //for normalization
-                float normx = yhatX/(float) dm.widthPixels;
-                float normy = yhatY/(float) dm.heightPixels;
+                float normx = inputX/(float) dm.widthPixels;
+                float normy = inputY/(float) dm.heightPixels;
                 calibration_button.setVisibility(View.INVISIBLE);
                 GraphicOverlay maskOverlay = ((Activity)Fcontext).findViewById(R.id.mask_overlay);
                 maskOverlay.setVisibility(View.VISIBLE);
@@ -390,11 +519,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 if(calibration_phase<FPS) {
                     calibration_point.setVisibility(View.INVISIBLE);
                     calibration_instruction.setVisibility(View.VISIBLE);
+                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = top_right_mean_X = top_right_mean_Y =
+                            bottom_left_mean_X = bottom_left_mean_Y = bottom_right_mean_X = bottom_right_mean_Y = 0;
                 }
                 else if(calibration_phase<FPS*3) {
                     //skip first 10 results (eye movement delay)
                     calibration_instruction.setVisibility(View.INVISIBLE);
                     if (calibration_phase<(FPS*3+SKIP_FRAME)){
+                        //calibration on center
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
@@ -402,10 +534,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.heightPixels/2,widthPixels/2) but estimated point is (yhatX,yhatY)
                         appendLog("0.5 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("0.5 1:" + normx + " 2:" + normy, "trainY");
+                        center_mean_X+=inputX;
+                        center_mean_Y+=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*4) {
                     if (calibration_phase<(FPS*4+SKIP_FRAME)) {
+                        //Top Left
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
@@ -413,10 +548,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:"+normx+" 2:"+normy,"trainX");
                         appendLog("0 1:"+normx+" 2:"+normy,"trainY");
+                        top_left_mean_X+=inputX;
+                        top_left_mean_Y+=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*5) {
                     if (calibration_phase<(FPS*5+SKIP_FRAME)) {
+                        //Top Right
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
@@ -424,10 +562,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("0 1:" + normx + " 2:" + normy, "trainY");
+                        top_right_mean_X+=inputX;
+                        top_right_mean_Y+=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*6) {
                     if (calibration_phase<(FPS*6+SKIP_FRAME)) {
+                        //Bottom Left
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
@@ -435,10 +576,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
+                        bottom_left_mean_X+=inputX;
+                        bottom_left_mean_Y+=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*7) {
                     if (calibration_phase<(FPS*7+SKIP_FRAME)) {
+                        //Bottom Right
                         params.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
                         params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                         params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, 0);
@@ -446,6 +590,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
+                        bottom_right_mean_X+=inputX;
+                        bottom_right_mean_Y+=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*8) {
@@ -453,10 +599,43 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         calibration_flag = false;
                         // TODO Loading GIF and Training SVR and Deploy it
                         // libsvm train option "-s 3 -t 2 -c COST -g GAMMA" will do the magic probably
-                        String svmXdir = basedir + "trainX.txt";
-                        String svmYdir = basedir + "trainY.txt";
-                        svmX.train("-s 3 -t 2 -c "+COST+" -g "+GAMMA+" " + svmXdir + " " + basedir + "svmX.model");
-                        svmY.train("-s 3 -t 2 -c "+COST+" -g "+GAMMA+" " + svmYdir + " " + basedir + "svmY.model");
+                        if(calibration_mode_SVR) {
+                            // SVR Calibration
+                            String svmXdir = basedir + "trainX.txt";
+                            String svmYdir = basedir + "trainY.txt";
+                            svmX.train("-s 3 -t 2 -c " + COST + " -g " + GAMMA + " " + svmXdir + " " + basedir + "svmX.model");
+                            svmY.train("-s 3 -t 2 -c " + COST + " -g " + GAMMA + " " + svmYdir + " " + basedir + "svmY.model");
+                        }
+                        else {
+                            // Calculating
+                            center_mean_X = center_mean_X / (float) (FPS - SKIP_FRAME);
+                            center_mean_Y = center_mean_Y / (float) (FPS - SKIP_FRAME);
+                            top_left_mean_X = top_left_mean_X / (float) (FPS - SKIP_FRAME);
+                            top_left_mean_Y = top_left_mean_Y / (float) (FPS - SKIP_FRAME);
+                            top_right_mean_X = top_right_mean_X / (float) (FPS - SKIP_FRAME);
+                            top_right_mean_Y = top_right_mean_Y / (float) (FPS - SKIP_FRAME);
+                            bottom_left_mean_X = bottom_left_mean_X / (float) (FPS - SKIP_FRAME);
+                            bottom_left_mean_Y = bottom_left_mean_Y / (float) (FPS - SKIP_FRAME);
+                            bottom_right_mean_X = bottom_right_mean_X / (float) (FPS - SKIP_FRAME);
+                            bottom_right_mean_Y = bottom_right_mean_Y / (float) (FPS - SKIP_FRAME);
+                            Log.d("MOBED_CalibOffset","center_mean x:"+center_mean_X+" y:"+center_mean_Y);
+                            Log.d("MOBED_CalibOffset","top_left_mean x:"+top_left_mean_X+" y:"+top_left_mean_Y);
+                            Log.d("MOBED_CalibOffset","top_right_mean x:"+top_right_mean_X+" y:"+top_right_mean_Y);
+                            Log.d("MOBED_CalibOffset","bottom_left_mean x:"+bottom_left_mean_X+" y:"+bottom_left_mean_Y);
+                            Log.d("MOBED_CalibOffset","bottom_right_mean x:"+bottom_right_mean_X+" y:"+bottom_right_mean_Y);
+                            // offset values
+                            center_offset_X = center_mean_X;
+                            center_offset_Y = center_mean_Y;
+                            top_left_offset_X = (top_left_mean_X + bottom_left_mean_X) / 2.0f;
+                            top_left_offset_Y = (top_left_mean_Y + top_right_mean_Y) / 2.0f;
+                            bottom_right_offset_X = (top_right_mean_X + bottom_right_mean_X) / 2.0f;
+                            bottom_right_offset_Y = (bottom_left_mean_Y + bottom_right_mean_Y) / 2.0f;
+                            center_offset_X = (bottom_right_offset_X+top_left_offset_X)/2.0f;
+                            center_offset_Y = (bottom_right_offset_Y+top_left_offset_Y)/2.0f;
+                            Log.d("MOBED_CalibOffset","center_offset x:"+center_offset_X+" y:"+center_offset_Y);
+                            Log.d("MOBED_CalibOffset","top_left x:"+top_left_offset_X+" y:"+top_left_offset_Y);
+                            Log.d("MOBED_CalibOffset","bottom_right x:"+bottom_right_offset_X+" y:"+bottom_right_offset_Y);
+                        }
                         // Calibration Done
                         calibration_model_exist = true;
                     }
@@ -474,8 +653,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 calibration_point.setVisibility(View.INVISIBLE);
                 calibration_button.setVisibility(View.VISIBLE);
                 calibration_button.setText(R.string.calibration);
-                graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY));
+                graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, moving_average_X, moving_average_Y,calib_X,calib_Y));
             }
+
+
         }
     }
 

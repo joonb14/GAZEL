@@ -219,9 +219,9 @@ public final class LivePreviewActivity extends AppCompatActivity
                                     } else {
                                         try {
                                             //InputStream inputStream = getAssets().open("custom_models/ykmodel.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes_model.tflite");
+                                            InputStream inputStream = getAssets().open("custom_models/onlyeyes_model.tflite");
                                             //InputStream inputStream = getAssets().open("custom_models/jw_onlyeyes_model.tflite");
-                                            InputStream inputStream = getAssets().open("custom_models/jw_only_eyes_all_model.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/jw_only_eyes_all_model.tflite");
                                             //InputStream inputStream = getAssets().open("custom_models/s9.tflite");
                                             byte[] model = new byte[inputStream.available()];
                                             inputStream.read(model);

@@ -41,27 +41,37 @@ public class FaceGraphic extends Graphic {
     private String TAG = "MOBED_FaceGraphic";
     private boolean showEyes = true;
     private static final float EYE_BOX_RATIO = 1.4f;
-    private static final float FACE_POSITION_RADIUS = 40.0f;
+    private static final float FACE_POSITION_RADIUS = 30.0f;
     private static final float BOX_STROKE_WIDTH = 5.0f;
     public float leftEyeleft, leftEyetop, leftEyeright, leftEyebottom;
     public float rightEyeleft, rightEyetop, rightEyeright, rightEyebottom;
 
-    private final Paint  rightEyePaint,leftEyePaint, gazePointPaint;
+    private final Paint  rightEyePaint,leftEyePaint, gazePointPaint, movingAveragePaint, calibPaint;
     private volatile Face face;
     private float yhatx;
     private float yhaty;
-    private float x, y;
+    private float x, y, moving_average_X, moving_average_Y,calib_X,calib_Y;
 
-    FaceGraphic(GraphicOverlay overlay, Face face, float yhatx, float yhaty) {
+    FaceGraphic(GraphicOverlay overlay, Face face, float yhatx, float yhaty, float moving_average_X, float moving_average_Y, float calib_X, float calib_Y) {
         super(overlay);
 
         this.face = face;
         this.yhatx = yhatx;
         this.yhaty = yhaty;
+        this.moving_average_X = moving_average_X;
+        this.moving_average_Y = moving_average_Y;
+        this.calib_X = calib_X;
+        this.calib_Y = calib_Y;
         final int selectedColor = Color.RED;
 
         gazePointPaint = new Paint();
         gazePointPaint.setColor(selectedColor);
+
+        movingAveragePaint = new Paint();
+        movingAveragePaint.setColor(Color.BLUE);
+
+        calibPaint = new Paint();
+        calibPaint.setColor(Color.GREEN);
 
         leftEyePaint = new Paint();
         leftEyePaint.setColor(Color.WHITE);
@@ -100,6 +110,20 @@ public class FaceGraphic extends Graphic {
         else if(yhaty<0) y =0;
         else y = yhaty;
         canvas.drawCircle(x, y, FACE_POSITION_RADIUS, gazePointPaint);
+        if (moving_average_X>=width) x = width;
+        else if(moving_average_X<0) x =0;
+        else x = moving_average_X;
+        if (moving_average_Y>=height) y = width;
+        else if(moving_average_Y<0) y =0;
+        else y = moving_average_Y;
+        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, movingAveragePaint);
+        if (calib_X>=width) x = width;
+        else if(calib_X<0) x =0;
+        else x = calib_X;
+        if (calib_Y>=height) y = width;
+        else if(calib_Y<0) y =0;
+        else y = calib_Y;
+        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, calibPaint);
 
         if(showEyes) {
             try {
