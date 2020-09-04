@@ -94,15 +94,6 @@ public final class LivePreviewActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
 
-        //MOBED
-        String dir_path = Environment.getExternalStorageDirectory() + "/MobiGaze";
-        if (!dir_exists(dir_path)){
-            File directory = new File(dir_path);
-            if(!directory.mkdirs()){
-                Log.e(TAG, "Cannot create Directory "+dir_path);
-            }
-        }
-
         setContentView(R.layout.activity_vision_live_preview);
 
         preview = findViewById(R.id.preview);
@@ -124,7 +115,11 @@ public final class LivePreviewActivity extends AppCompatActivity
         } else {
             getRuntimePermissions();
         }
+
+        //MOBED
+        createDirectories();
     }
+
     public static SharedPreferences getSf() {
         return sf;
     }
@@ -202,11 +197,6 @@ public final class LivePreviewActivity extends AppCompatActivity
                     FaceDetectorOptions faceDetectorOptions =
                             PreferenceUtils.getFaceDetectorOptionsForLivePreview(this);
 
-                    //MOBED Custom Model
-//                    FileInputStream f_input_stream= new FileInputStream(new File("custom_models/jw_model.tflite"));
-//                    FileChannel f_channel = f_input_stream.getChannel();
-//                    MappedByteBuffer tflite_model = f_channel.map(FileChannel.MapMode.READ_ONLY, 0, f_channel .size());
-//                    interpreter = new Interpreter(tflite_model);
                     FirebaseCustomRemoteModel remoteModel =
                             new FirebaseCustomRemoteModel.Builder("MobiGaze").build();
                     FirebaseModelManager.getInstance().getLatestModelFile(remoteModel)
@@ -218,11 +208,11 @@ public final class LivePreviewActivity extends AppCompatActivity
                                         interpreter = new Interpreter(modelFile);
                                     } else {
                                         try {
-                                            //InputStream inputStream = getAssets().open("custom_models/ykmodel.tflite");
-                                            InputStream inputStream = getAssets().open("custom_models/onlyeyes_model.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/jw_onlyeyes_model.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/jw_only_eyes_all_model.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/s9.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/mpiigaze/feature64x2x2.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_rgb/jitter_onlyeyes3.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_rgb/onlyeyes.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_bw/jitter_onlyeyes.tflite");
+                                            InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_bw/onlyeyes.tflite");
                                             byte[] model = new byte[inputStream.available()];
                                             inputStream.read(model);
                                             ByteBuffer buffer = ByteBuffer.allocateDirect(model.length)
@@ -368,5 +358,43 @@ public final class LivePreviewActivity extends AppCompatActivity
         if(dir.exists() && dir.isDirectory())
             ret = true;
         return ret;
+    }
+
+    public void createDirectories() {
+        String dir_path = Environment.getExternalStorageDirectory() + "/MobiGaze";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
+        dir_path = Environment.getExternalStorageDirectory() + "/CaptureApp";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
+        dir_path = Environment.getExternalStorageDirectory() + "/CaptureApp/righteye";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
+        dir_path = Environment.getExternalStorageDirectory() + "/CaptureApp/lefteye";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
+        dir_path = Environment.getExternalStorageDirectory() + "/CaptureApp/face";
+        if (!dir_exists(dir_path)){
+            File directory = new File(dir_path);
+            if(!directory.mkdirs()){
+                Log.e(TAG, "Cannot create Directory "+dir_path);
+            }
+        }
     }
 }

@@ -18,7 +18,9 @@ package com.google.mlkit.vision.demo.facedetector;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.graphics.PointF;
 import androidx.renderscript.Allocation;
 import androidx.renderscript.RenderScript;
@@ -37,6 +39,7 @@ import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.demo.GraphicOverlay;
+import com.google.mlkit.vision.demo.LivePreviewActivity;
 import com.google.mlkit.vision.demo.Queue;
 import com.google.mlkit.vision.demo.R;
 import com.google.mlkit.vision.demo.VisionProcessorBase;
@@ -57,6 +60,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +74,7 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     // Constant Values
     private final boolean THREE_CHANNEL = false;
-    private final boolean calibration_mode_SVR = true;
+    private final boolean calibration_mode_SVR = false;
     private static final float EYE_BOX_RATIO = 1.4f;
     private final int resolution = 64;
     private final int grid_size = 25;
@@ -90,7 +94,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private RenderScript RS;
     private ScriptC_singlesource script;
 
-    private float[][][][] left_4d, right_4d, face_grid, face_input, lefteye_grid, righteye_grid;
+    private float[][][][] left_4d, right_4d, face_grid, lefteye_grid, righteye_grid ,face_input;
+    //private float[][][] face_input;
 
     private float yhatX =0, yhatY=0;
     LibSVM svmX;
@@ -115,6 +120,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float bottom_right_offset_X, bottom_right_offset_Y;
     private float center_offset_X, center_offset_Y;
     private float calib_X, calib_Y;
+    //Bitmap returns mirrored image so needs mirroring matrix at first
+    private Matrix matrix;
 
     public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
@@ -128,6 +135,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
         svmX = new LibSVM();
         svmY = new LibSVM();
         basedir = Environment.getExternalStorageDirectory().getPath()+"/MobiGaze/";
+        float[] mirrorY = {
+                -1, 0, 0,
+                0, 1, 0,
+                0, 0, 1
+        };
+        matrix = new Matrix();
+        matrix.setValues(mirrorY);
         Xqueue = new Queue(QUEUE_SIZE);
         Yqueue = new Queue(QUEUE_SIZE);
         calibration_button.setOnClickListener(new Button.OnClickListener() {
@@ -219,8 +233,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 rightEyetop = righteye_centery + righteyeboxsize;
                 rightEyeright = righteye_centerx + righteyeboxsize;
                 rightEyebottom = righteye_centery - righteyeboxsize;
-                Bitmap leftBitmap=Bitmap.createBitmap(image, (int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2));
-                Bitmap rightBitmap=Bitmap.createBitmap(image, (int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2));
+                Bitmap leftBitmap=Bitmap.createBitmap(image, (int)leftEyeleft,(int)leftEyebottom,(int)(lefteyeboxsize*2), (int)(lefteyeboxsize*2), matrix, false);
+                Bitmap rightBitmap=Bitmap.createBitmap(image, (int)rightEyeleft,(int)rightEyebottom,(int)(righteyeboxsize*2), (int)(righteyeboxsize*2), matrix, false);
                 if (leftBitmap.getHeight() > resolution){
                     leftBitmap = Bitmap.createScaledBitmap(leftBitmap, resolution,resolution,false);
                 }
@@ -289,7 +303,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                Rect facePos = face.getBoundingBox();
 //                float faceboxWsize = facePos.right - facePos.left;
 //                float faceboxHsize = facePos.bottom - facePos.top;
-//                Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize);
+//                Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize, matrix, false);
 //                faceBitmap = Bitmap.createScaledBitmap(faceBitmap, resolution,resolution,false);
 //                int[] face_pix = new int[resolution*resolution];
 //                faceBitmap.getPixels(face_pix,0,resolution,0,0,resolution,resolution);
@@ -300,10 +314,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                for(int y = 0; y < resolution; y++) {
 //                    for (int x = 0; x < resolution; x++) {
 //                        int index = y * resolution + x;
-//                        face_input[0][y][x][0] = ((eye[index] & 0x00FF0000) >> 16)/(float)255;
+//                        face_input[0][y][x][0] = ((face_pix[index] & 0x00FF0000) >> 16)/(float)255.0f;
 //                        if(THREE_CHANNEL) {
-//                            face_input[0][y][x][1] = ((eye[index] & 0x0000FF00) >> 8)/(float)255;;
-//                            face_input[0][y][x][2] = (eye[index] & 0x000000FF)/(float)255;;
+//                            face_input[0][y][x][1] = ((face_pix[index] & 0x0000FF00) >> 8)/(float)255.0f;;
+//                            face_input[0][y][x][2] = (face_pix[index] & 0x000000FF)/(float)255.0f;;
 //                        }
 //                    }
 //                }
@@ -322,9 +336,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                for(int h=0; h<grid_size; h++){
 //                    for(int w=0; w<grid_size; w++) {
 //                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            face_grid[0][h][w][0] = 1;
+//                            face_grid[0][h][(grid_size-1)-w][0] = 1;
 //                        }
-//                        else face_grid[0][h][w][0] = 0;
+//                        else face_grid[0][h][(grid_size-1)-w][0] = 0;
 //                    }
 //                }
 
@@ -332,8 +346,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                 * Eye Grids
 //                 * Use to use these as inputs, but recognized just using eyes results in better results
 //                 * */
-//                int image_width = image.getWidth();
-//                int image_height = image.getHeight();
+//                image_width = image.getWidth();
+//                image_height = image.getHeight();
 //                //left, bottom, width, height
 //                float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
 //                float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
@@ -344,9 +358,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                for(int h=0; h<grid_size; h++){
 //                    for(int w=0; w<grid_size; w++) {
 //                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            lefteye_grid[0][h][w][0] = 1;
+//                            lefteye_grid[0][h][(grid_size-1)-w][0] = 1;
 //                        }
-//                        else lefteye_grid[0][h][w][0] = 0;
+//                        else lefteye_grid[0][h][(grid_size-1)-w][0] = 0;
 //                    }
 //                }
 //
@@ -359,9 +373,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                for(int h=0; h<grid_size; h++){
 //                    for(int w=0; w<grid_size; w++) {
 //                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            righteye_grid[0][h][w][0] = 1;
+//                            righteye_grid[0][h][(grid_size-1)-w][0] = 1;
 //                        }
-//                        else righteye_grid[0][h][w][0] = 0;
+//                        else righteye_grid[0][h][(grid_size-1)-w][0] = 0;
 //                    }
 //                }
 
@@ -372,10 +386,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
                 //For ykmodel.tflite
                 //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
-                //For onlyeyes_model.tflite jw_only_eyes_all_model.tflite
+                //For jitter_onlyeyes3.tflite onlyeyes.tflite
                 float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
-                //For jw_onlyeyes_model.tflite
+                //For jitter_onlyeyes.tflite
                 //float[][][][][] inputs = new float[][][][][]{right_4d, left_4d};
+
+                //For MPiiFaceGaze, input is only face_input
+                //float[][][][] inputs = new float[][][][]{face_input};
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
@@ -397,6 +414,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     }
                     //Run TFLite
                     tflite.runForMultipleInputsOutputs(inputs, outputs);
+                    //tflite.run(face_input, output);
                     //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
@@ -482,8 +500,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                int count = sf.getInt("count",0);
 //                String file0 = "lefteye"+count+".jpg";
 //                String file1 = "righteye"+count+".jpg";
+//                String file2 = "face"+count+".jpg";
 //                SaveBitmapToFileCache(leftBitmap,"/sdcard/CaptureApp/lefteye/",file0);
 //                SaveBitmapToFileCache(rightBitmap,"/sdcard/CaptureApp/righteye/",file1);
+//                //SaveBitmapToFileCache(faceBitmap,"/sdcard/CaptureApp/face/",file2);
 //                Log.d(TAG, "Bitmap saved");
 //                LivePreviewActivity.addCount();
             }
@@ -519,8 +539,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 if(calibration_phase<FPS) {
                     calibration_point.setVisibility(View.INVISIBLE);
                     calibration_instruction.setVisibility(View.VISIBLE);
-                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = top_right_mean_X = top_right_mean_Y =
-                            bottom_left_mean_X = bottom_left_mean_Y = bottom_right_mean_X = bottom_right_mean_Y = 0;
+                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 3000;
+                    top_right_mean_X = bottom_left_mean_Y = bottom_right_mean_X = bottom_right_mean_Y = 0;
                 }
                 else if(calibration_phase<FPS*3) {
                     //skip first 10 results (eye movement delay)
@@ -548,8 +568,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:"+normx+" 2:"+normy,"trainX");
                         appendLog("0 1:"+normx+" 2:"+normy,"trainY");
-                        top_left_mean_X+=inputX;
-                        top_left_mean_Y+=inputY;
+                        if(top_left_mean_X > inputX) top_left_mean_X=inputX;
+                        if(top_left_mean_Y > inputY) top_left_mean_Y=inputY;
                     }
                 }
                 else if(calibration_phase<FPS*5) {
@@ -562,8 +582,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("0 1:" + normx + " 2:" + normy, "trainY");
-                        top_right_mean_X+=inputX;
-                        top_right_mean_Y+=inputY;
+                        if(top_right_mean_X < inputX) top_right_mean_X = inputX;
+                        if(top_right_mean_Y > inputY) top_right_mean_Y = inputY;
                     }
                 }
                 else if(calibration_phase<FPS*6) {
@@ -576,8 +596,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
-                        bottom_left_mean_X+=inputX;
-                        bottom_left_mean_Y+=inputY;
+                        if(bottom_left_mean_X > inputX) bottom_left_mean_X = inputX;
+                        if(bottom_left_mean_Y < inputY) bottom_left_mean_Y = inputY;
                     }
                 }
                 else if(calibration_phase<FPS*7) {
@@ -590,8 +610,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
-                        bottom_right_mean_X+=inputX;
-                        bottom_right_mean_Y+=inputY;
+                        if(bottom_right_mean_X < inputX) bottom_right_mean_X = inputX;
+                        if(bottom_right_mean_Y < inputY) bottom_right_mean_Y = inputY;
                     }
                 }
                 else if(calibration_phase<FPS*8) {
@@ -610,14 +630,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                             // Calculating
                             center_mean_X = center_mean_X / (float) (FPS - SKIP_FRAME);
                             center_mean_Y = center_mean_Y / (float) (FPS - SKIP_FRAME);
-                            top_left_mean_X = top_left_mean_X / (float) (FPS - SKIP_FRAME);
-                            top_left_mean_Y = top_left_mean_Y / (float) (FPS - SKIP_FRAME);
-                            top_right_mean_X = top_right_mean_X / (float) (FPS - SKIP_FRAME);
-                            top_right_mean_Y = top_right_mean_Y / (float) (FPS - SKIP_FRAME);
-                            bottom_left_mean_X = bottom_left_mean_X / (float) (FPS - SKIP_FRAME);
-                            bottom_left_mean_Y = bottom_left_mean_Y / (float) (FPS - SKIP_FRAME);
-                            bottom_right_mean_X = bottom_right_mean_X / (float) (FPS - SKIP_FRAME);
-                            bottom_right_mean_Y = bottom_right_mean_Y / (float) (FPS - SKIP_FRAME);
+//                            top_left_mean_X = top_left_mean_X / (float) (FPS - SKIP_FRAME);
+//                            top_left_mean_Y = top_left_mean_Y / (float) (FPS - SKIP_FRAME);
+//                            top_right_mean_X = top_right_mean_X / (float) (FPS - SKIP_FRAME);
+//                            top_right_mean_Y = top_right_mean_Y / (float) (FPS - SKIP_FRAME);
+//                            bottom_left_mean_X = bottom_left_mean_X / (float) (FPS - SKIP_FRAME);
+//                            bottom_left_mean_Y = bottom_left_mean_Y / (float) (FPS - SKIP_FRAME);
+//                            bottom_right_mean_X = bottom_right_mean_X / (float) (FPS - SKIP_FRAME);
+//                            bottom_right_mean_Y = bottom_right_mean_Y / (float) (FPS - SKIP_FRAME);
                             Log.d("MOBED_CalibOffset","center_mean x:"+center_mean_X+" y:"+center_mean_Y);
                             Log.d("MOBED_CalibOffset","top_left_mean x:"+top_left_mean_X+" y:"+top_left_mean_Y);
                             Log.d("MOBED_CalibOffset","top_right_mean x:"+top_right_mean_X+" y:"+top_right_mean_Y);
