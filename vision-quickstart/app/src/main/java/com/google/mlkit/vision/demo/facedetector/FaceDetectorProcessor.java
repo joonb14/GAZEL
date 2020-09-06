@@ -386,9 +386,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
                 //For ykmodel.tflite
                 //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
-                //For jitter_onlyeyes3.tflite onlyeyes.tflite
+                //For jw{ jitter_onlyeyes3.tflite onlyeyes.tflite } jb {jitter_onlyeyes.tflite onlyeyes.tflite }
                 float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
-                //For jitter_onlyeyes.tflite
+                //For jw { jitter_onlyeyes.tflite }
                 //float[][][][][] inputs = new float[][][][][]{right_4d, left_4d};
 
                 //For MPiiFaceGaze, input is only face_input
