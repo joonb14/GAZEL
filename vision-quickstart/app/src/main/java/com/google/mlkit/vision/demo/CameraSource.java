@@ -286,11 +286,15 @@ public class CameraSource {
 
         SizePair sizePair = PreferenceUtils.getCameraPreviewSizePair(activity, requestedCameraId);
         if (sizePair == null) {
+            Log.d("MOBED_PREVIEW","Requested camera preview");
             sizePair =
                     selectSizePair(
                             camera,
                             DEFAULT_REQUESTED_CAMERA_PREVIEW_WIDTH,
                             DEFAULT_REQUESTED_CAMERA_PREVIEW_HEIGHT);
+        }
+        else {
+            Log.d("MOBED_PREVIEW","PreferenceUtils.getCameraPreviewSizePair(activity, requestedCameraId)");
         }
 
         if (sizePair == null) {
@@ -447,14 +451,17 @@ public class CameraSource {
         List<SizePair> validPreviewSizes = new ArrayList<>();
         for (Camera.Size previewSize : supportedPreviewSizes) {
             float previewAspectRatio = (float) previewSize.width / (float) previewSize.height;
+            Log.d("MOBED_PREVIEW","Preview size: "+previewSize.width+","+previewSize.height);
 
             // By looping through the picture sizes in order, we favor the higher resolutions.
             // We choose the highest resolution in order to support taking the full resolution
             // picture later.
             for (Camera.Size pictureSize : supportedPictureSizes) {
                 float pictureAspectRatio = (float) pictureSize.width / (float) pictureSize.height;
+                Log.d("MOBED_PREVIEW","Picture size: "+pictureSize.width+","+pictureSize.height);
                 if (Math.abs(previewAspectRatio - pictureAspectRatio) < ASPECT_RATIO_TOLERANCE) {
                     validPreviewSizes.add(new SizePair(previewSize, pictureSize));
+                    Log.d("MOBED_PREVIEW","Valid preview size: "+previewSize.width+","+previewSize.height+ " Valid picture size: "+pictureSize.width+","+pictureSize.height);
                     break;
                 }
             }

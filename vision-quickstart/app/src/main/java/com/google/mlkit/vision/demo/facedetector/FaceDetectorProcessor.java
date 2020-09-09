@@ -77,6 +77,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private final boolean THREE_CHANNEL = false;
     private final boolean calibration_mode_SVR = false;
     private static final float EYE_BOX_RATIO = 1.4f;
+    private final double SACCADE_THRESHOLD = 300;
     private final int resolution = 64;
     private final int grid_size = 50;
     private final int face_grid_size = 25;
@@ -125,6 +126,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float calib_X, calib_Y;
     //Bitmap returns mirrored image so needs mirroring matrix at first
     private Matrix matrix;
+
+    //Saccade detection
+    private boolean isSaccade = false;
 
     public FaceDetectorProcessor(Context context, FaceDetectorOptions options ) {
         super(context);
@@ -477,6 +481,17 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         Yqueue.queueDequeue();
                         Xqueue.queueEnqueue(yhatX);
                         Yqueue.queueEnqueue(yhatY);
+
+                        double distance = Math.sqrt(Math.pow(moving_average_X-yhatX,2) + Math.pow(moving_average_Y-yhatY,2));
+                        if(distance > SACCADE_THRESHOLD) {
+                            isSaccade = true;
+                            Log.d("MOBED_SACCADE","SACCADE, distance: "+distance + " | yhat: "+yhatX+","+yhatY+ " | moving_average: "+moving_average_X+","+moving_average_Y);
+                        }
+                        else {
+                            isSaccade = false;
+                            Log.d("MOBED_SACCADE","FIXATION, distance: "+distance + " | yhat: "+yhatX+","+yhatY+ " | moving_average: "+moving_average_X+","+moving_average_Y);
+                        }
+
                         moving_average_X = moving_average_X*0.6f+yhatX*0.4f;
                         moving_average_Y = moving_average_Y*0.6f+yhatY*0.4f;
                         //Log.d(TAG,"Queue("+moving_average_X+","+moving_average_Y+")");
@@ -570,11 +585,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 calibration_point.setVisibility(View.VISIBLE);
                 RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)calibration_point.getLayoutParams();
                 TextView calibration_instruction = (TextView) ((Activity)Fcontext).findViewById(R.id.calibration_instruction);
+                //if SACCADE this data is not suitable for calibration
+                if(isSaccade) continue;
                 // Calibration Phase
                 if(calibration_phase<FPS) {
                     calibration_point.setVisibility(View.INVISIBLE);
                     calibration_instruction.setVisibility(View.VISIBLE);
-                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 3000;
+                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 5000;
                     top_right_mean_X = bottom_left_mean_Y = bottom_right_mean_X = bottom_right_mean_Y = 0;
                 }
                 else if(calibration_phase<FPS*3) {
