@@ -5,30 +5,24 @@ inspired by: <a href="https://gazecapture.csail.mit.edu/">Eye Tracking for Every
 Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
-<a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
-### Before Cloning to Your Directory
-Now we are using lighter model onlyeyes_model.tflite(17MB) so in case you want to use ResNet-18, 224x224x1 input size version, follow instructions below<br>
-This work requires <a href="https://git-lfs.github.com/"><b>git-lfs</b></a> so you must install it first. (jw_model.tflite file exceeds 100MB...)<br>
-After installing git-lfs, on the Directory you want to clone this work, <br>
-<pre><code>$ git lfs install
-Git LFS initialized.
-$ git clone https://github.com/joonb14/MobiGaze.git
-</code></pre>
+<a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br><br>
+
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
 Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
 stored in asset folder. Created with Keras, converted to tflite.<br>
-named "onlyeyes_model.tflite"(we also have ResNet-18 model named "jw_model.tflite"(224x224x1 input) and CNN model named "ykmodel.tflite"(64x64x1 input))<br>
-You can check the output on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
+named "facepos.tflite" model has best accuracy<br>
+You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 ### Working on...
-MobiGaze uses Personalized model. This example is based on my Data. So would not work well on any other people.<br>
-Now working on Calibration. Typically we are going to use 5 points calibration with SVR.<br>
-TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
-Since multi output SVR doesn't exist in android, we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
-However the problem is... I cannot get the right cost and gamma for SVR... <br>
-Keras model training & conversion Code will be uploaded soon.
+MobiGaze uses Personalized model. This example is based on my Data(Wearing glasses). So would not work well on other person.<br>
+Now working on Calibration. Typically we are going to use 5 points calibration with translation, and rescaling.<br>
+5 points are TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
+We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
+However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration point than 5. <br>
+So we use default calibration method with translation, and rescaling.<br>
+Keras model training & conversion Code will be uploaded soon.<br><br>
 ### Issues
 TensorFlow Lite Conversion. Before you load your tflite model, you must check the input details to make sure input order is correct.<br>
 In case you are using python interpreter,
@@ -39,16 +33,31 @@ tflite.get_input_details()
 </code></pre>
 example output will be
 <pre><code>[{'name': 'left_eye',
-  'index': 1,
+  'index': 4,
   'shape': array([ 1, 64, 64,  1], dtype=int32),
   'dtype': numpy.float32,
   'quantization': (0.0, 0)},
  {'name': 'right_eye',
-  'index': 39,
+  'index': 56,
   'shape': array([ 1, 64, 64,  1], dtype=int32),
+  'dtype': numpy.float32,
+  'quantization': (0.0, 0)},
+ {'name': 'euler',
+  'index': 1,
+  'shape': array([1, 1, 1, 3], dtype=int32),
+  'dtype': numpy.float32,
+  'quantization': (0.0, 0)},
+ {'name': 'facepos',
+  'index': 3,
+  'shape': array([1, 1, 1, 2], dtype=int32),
+  'dtype': numpy.float32,
+  'quantization': (0.0, 0)},
+ {'name': 'face_grid',
+  'index': 2,
+  'shape': array([ 1, 25, 25,  1], dtype=int32),
   'dtype': numpy.float32,
   'quantization': (0.0, 0)}]
 </code></pre>
 Then reorder your inputs in <b>FaceDetectorProcessor.java</b>
-<pre><code>float[][][][][] inputs = new float[][][][][]{left_4d, right_4d}; // make sure the order is correct
+<pre><code>inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid}; // make sure the order is correct
 </code></pre>
