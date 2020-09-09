@@ -69,25 +69,36 @@ import java.util.Map;
 import umich.cse.yctung.androidlibsvm.LibSVM;
 
 /**
- * Face Detector Demo.
+ * MobiGaze: Personalized Mobile Gaze Tracker
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
-    // Constant Values
-    private final boolean USE_EULER = true;
-    private final boolean THREE_CHANNEL = false;
-    private final boolean calibration_mode_SVR = false;
-    private final boolean CORNER_CALIBRATION = false;
-    private static final float EYE_BOX_RATIO = 1.4f;
-    private final double SACCADE_THRESHOLD = 300;
-    private final int resolution = 64;
-    private final int grid_size = 50;
-    private final int face_grid_size = 25;
-    private final int FPS = 30;
-    private final int SKIP_FRAME = 10;
-    private final int COST = 100;
-    private final int GAMMA = 20;
-    private final int QUEUE_SIZE = 20;
+    /**
+     * Config Modes
+     * */
+    private final boolean USE_EULER = true; // true: use euler x,y,z as input
+    private final boolean USE_FACE = false; // true: use face x,y,z as input
+    private final boolean USE_EYEGRID = false; // true: use eye_grid as input
+    private final boolean USE_FACEGRID = true; // true: use face_grid as input
+    private final boolean THREE_CHANNEL = false; // false for Black and White image, true for RGB image
+    private final boolean calibration_mode_SVR = false; // false for translation & rescale. true for SVR
+    private final boolean CORNER_CALIBRATION = false; // false for translation & rescale with center, true for only 4 corners
+    /**
+     * Config Values
+     * */
+    private final double SACCADE_THRESHOLD = 300; // distance for classifying FIXATION and SACCADE
+    private final int resolution = 64; // for eye and face
+    private final int grid_size = 50; // for eye_grids
+    private final int face_grid_size = 25; // for face_grid
+    private final int FPS = 30; // for calibration count
+    private final int SKIP_FRAME = 10; // for calibration count
+    private final int COST = 100; // for SVR
+    private final int GAMMA = 20; // for SVR
+    private final int QUEUE_SIZE = 20; // for moving average
     private final float EYE_OPEN_PROB = 0.0f; //empirical value
+    /**
+     * Constant Values
+     */
+    private static final float EYE_BOX_RATIO = 1.4f;
     private static final String TAG = "MOBED_FaceDetector";
 
     public static Interpreter tflite;
@@ -277,10 +288,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                  * Euler
                  * EulerX, EulerY, EulerZ
                  * */
-                euler = new float[1][1][1][3];
-                euler[0][0][0][0] = face.getHeadEulerAngleX();
-                euler[0][0][0][1] = face.getHeadEulerAngleY();
-                euler[0][0][0][2] = face.getHeadEulerAngleZ();
+                if(USE_EULER) {
+                    euler = new float[1][1][1][3];
+                    euler[0][0][0][0] = face.getHeadEulerAngleX();
+                    euler[0][0][0][1] = face.getHeadEulerAngleY();
+                    euler[0][0][0][2] = face.getHeadEulerAngleZ();
+                }
                 /**
                  * Left Eye
                  * */
@@ -323,24 +336,26 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 Rect facePos = face.getBoundingBox();
                 float faceboxWsize = facePos.right - facePos.left;
                 float faceboxHsize = facePos.bottom - facePos.top;
-//                Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize, matrix, false);
-//                faceBitmap = Bitmap.createScaledBitmap(faceBitmap, resolution,resolution,false);
-//                int[] face_pix = new int[resolution*resolution];
-//                faceBitmap.getPixels(face_pix,0,resolution,0,0,resolution,resolution);
-//                if(!THREE_CHANNEL) {
-//                    face_input = new float[1][resolution][resolution][1];
-//                }
-//                else face_input = new float[1][resolution][resolution][3];
-//                for(int y = 0; y < resolution; y++) {
-//                    for (int x = 0; x < resolution; x++) {
-//                        int index = y * resolution + x;
-//                        face_input[0][y][x][0] = ((face_pix[index] & 0x00FF0000) >> 16)/(float)255.0f;
-//                        if(THREE_CHANNEL) {
-//                            face_input[0][y][x][1] = ((face_pix[index] & 0x0000FF00) >> 8)/(float)255.0f;;
-//                            face_input[0][y][x][2] = (face_pix[index] & 0x000000FF)/(float)255.0f;;
-//                        }
-//                    }
-//                }
+                if(USE_FACE) {
+                    Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize, matrix, false);
+                    faceBitmap = Bitmap.createScaledBitmap(faceBitmap, resolution,resolution,false);
+                    int[] face_pix = new int[resolution*resolution];
+                    faceBitmap.getPixels(face_pix,0,resolution,0,0,resolution,resolution);
+                    if(!THREE_CHANNEL) {
+                        face_input = new float[1][resolution][resolution][1];
+                    }
+                    else face_input = new float[1][resolution][resolution][3];
+                    for(int y = 0; y < resolution; y++) {
+                        for (int x = 0; x < resolution; x++) {
+                            int index = y * resolution + x;
+                            face_input[0][y][x][0] = ((face_pix[index] & 0x00FF0000) >> 16)/(float)255.0f;
+                            if(THREE_CHANNEL) {
+                                face_input[0][y][x][1] = ((face_pix[index] & 0x0000FF00) >> 8)/(float)255.0f;;
+                                face_input[0][y][x][2] = (face_pix[index] & 0x000000FF)/(float)255.0f;;
+                            }
+                        }
+                    }
+                }
                 /**
                  * Facepos
                  * */
@@ -361,59 +376,61 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                  * */
                 int image_width = image.getWidth();
                 int image_height = image.getHeight();
-                //left, bottom, width, height
-                float w_start = Math.round(face_grid_size*(facePos.left/(float)image_width));
-                float h_start = Math.round(face_grid_size*(facePos.top/(float)image_height));
-                float w_num = Math.round(face_grid_size*((faceboxWsize)/(float)image_width));
-                float h_num = Math.round(face_grid_size*((faceboxHsize)/(float)image_height));
+                float w_start,h_start,w_num,h_num;
+                if(USE_FACEGRID) {
+                    //left, bottom, width, height
+                    w_start = Math.round(face_grid_size * (facePos.left / (float) image_width));
+                    h_start = Math.round(face_grid_size * (facePos.top / (float) image_height));
+                    w_num = Math.round(face_grid_size * ((faceboxWsize) / (float) image_width));
+                    h_num = Math.round(face_grid_size * ((faceboxHsize) / (float) image_height));
 
-                face_grid = new float[1][face_grid_size][face_grid_size][1];
-                for(int h=0; h<face_grid_size; h++){
-                    for(int w=0; w<face_grid_size; w++) {
-                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-                            face_grid[0][h][(face_grid_size-1)-w][0] = 1;
+                    face_grid = new float[1][face_grid_size][face_grid_size][1];
+                    for (int h = 0; h < face_grid_size; h++) {
+                        for (int w = 0; w < face_grid_size; w++) {
+                            if (w >= w_start && w <= w_start + w_num && h >= h_start && h <= h_start + h_num) {
+                                face_grid[0][h][(face_grid_size - 1) - w][0] = 1;
+                            } else face_grid[0][h][(face_grid_size - 1) - w][0] = 0;
                         }
-                        else face_grid[0][h][(face_grid_size-1)-w][0] = 0;
                     }
                 }
+                /**
+                 * Eye Grids
+                 * Use to use these as inputs, but recognized just using eyes results in better results
+                 * */
+                if(USE_EYEGRID) {
+                    image_width = image.getWidth();
+                    image_height = image.getHeight();
+                    //left, bottom, width, height
+                    w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
+                    h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
+                    w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
+                    h_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_height));
 
-//                /**
-//                 * Eye Grids
-//                 * Use to use these as inputs, but recognized just using eyes results in better results
-//                 * */
-//                image_width = image.getWidth();
-//                image_height = image.getHeight();
-//                //left, bottom, width, height
-//                float w_start = Math.round(grid_size*(leftEyeleft/(float)image_width));
-//                float h_start = Math.round(grid_size*(leftEyebottom/(float)image_height));
-//                float w_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_width));
-//                float h_num = Math.round(grid_size*((2*lefteyeboxsize)/(float)image_height));
-//
-//                lefteye_grid = new float[1][grid_size][grid_size][1];
-//                for(int h=0; h<grid_size; h++){
-//                    for(int w=0; w<grid_size; w++) {
-//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            lefteye_grid[0][h][(grid_size-1)-w][0] = 1;
-//                        }
-//                        else lefteye_grid[0][h][(grid_size-1)-w][0] = 0;
-//                    }
-//                }
-//
-//                w_start = Math.round(grid_size*(rightEyeleft/(float)image_width));
-//                h_start = Math.round(grid_size*(rightEyebottom/(float)image_height));
-//                w_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_width));
-//                h_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_height));
-//
-//                righteye_grid = new float[1][grid_size][grid_size][1];
-//                for(int h=0; h<grid_size; h++){
-//                    for(int w=0; w<grid_size; w++) {
-//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            righteye_grid[0][h][(grid_size-1)-w][0] = 1;
-//                        }
-//                        else righteye_grid[0][h][(grid_size-1)-w][0] = 0;
-//                    }
-//                }
+                    lefteye_grid = new float[1][grid_size][grid_size][1];
+                    for(int h=0; h<grid_size; h++){
+                        for(int w=0; w<grid_size; w++) {
+                            if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+                                lefteye_grid[0][h][(grid_size-1)-w][0] = 1;
+                            }
+                            else lefteye_grid[0][h][(grid_size-1)-w][0] = 0;
+                        }
+                    }
 
+                    w_start = Math.round(grid_size*(rightEyeleft/(float)image_width));
+                    h_start = Math.round(grid_size*(rightEyebottom/(float)image_height));
+                    w_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_width));
+                    h_num = Math.round(grid_size*((2*righteyeboxsize)/(float)image_height));
+
+                    righteye_grid = new float[1][grid_size][grid_size][1];
+                    for(int h=0; h<grid_size; h++){
+                        for(int w=0; w<grid_size; w++) {
+                            if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+                                righteye_grid[0][h][(grid_size-1)-w][0] = 1;
+                            }
+                            else righteye_grid[0][h][(grid_size-1)-w][0] = 0;
+                        }
+                    }
+                }
                 /**
                  * Wrap them up to use them as input for TensorFlow Lite model
                  * */
