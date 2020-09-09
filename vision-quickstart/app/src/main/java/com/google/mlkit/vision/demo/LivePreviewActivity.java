@@ -208,22 +208,19 @@ public final class LivePreviewActivity extends AppCompatActivity
                                         interpreter = new Interpreter(modelFile);
                                     } else {
                                         try {
-                                            //InputStream inputStream = getAssets().open("custom_models/mpiigaze/feature64x2x2.tflite");
                                             /**
-                                             * JW
+                                             * TabS6
                                              * */
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_rgb/jitter_onlyeyes3.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_rgb/onlyeyes.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_bw/jitter_onlyeyes.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_bw/onlyeyes.tflite");
-                                            InputStream inputStream = getAssets().open("custom_models/onlyeyes/jw_bw/checkpoint/check_point.tflite");
-                                            /**
-                                             * JB
-                                             * */
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jb_rgb/jitter_onlyeyes.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jb_rgb/onlyeyes.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jb_bw/jitter_onlyeyes.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/onlyeyes/jb_bw/onlyeyes.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/tabs6.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/tabs6_all.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/tabs6_facegrid.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/tabs6_facegrid.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/layer_opt.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/fc_layer_opt.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/fc_layer_opt.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/facepos.tflite");
+                                            InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/facepos.tflite");
+
                                             byte[] model = new byte[inputStream.available()];
                                             inputStream.read(model);
                                             ByteBuffer buffer = ByteBuffer.allocateDirect(model.length)

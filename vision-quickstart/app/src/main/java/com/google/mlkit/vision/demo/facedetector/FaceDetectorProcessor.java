@@ -73,11 +73,13 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     // Constant Values
+    private final boolean USE_EULER = true;
     private final boolean THREE_CHANNEL = false;
     private final boolean calibration_mode_SVR = false;
     private static final float EYE_BOX_RATIO = 1.4f;
     private final int resolution = 64;
-    private final int grid_size = 25;
+    private final int grid_size = 50;
+    private final int face_grid_size = 25;
     private final int FPS = 30;
     private final int SKIP_FRAME = 10;
     private final int COST = 100;
@@ -94,8 +96,9 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private RenderScript RS;
     private ScriptC_singlesource script;
 
-    private float[][][][] left_4d, right_4d, face_grid, lefteye_grid, righteye_grid ,face_input;
+    private float[][][][] left_4d, right_4d, face_grid, lefteye_grid, righteye_grid ,face_input, euler, facepos;
     //private float[][][] face_input;
+    float[][][][][] inputs;
 
     private float yhatX =0, yhatY=0;
     LibSVM svmX;
@@ -260,7 +263,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     rightBitmap = Bitmap.createScaledBitmap(rightBitmap, resolution,resolution,false);
                 }
                 int[] eye = new int[resolution*resolution];
-
+                /**
+                 * Euler
+                 * EulerX, EulerY, EulerZ
+                 * */
+                euler = new float[1][1][1][3];
+                euler[0][0][0][0] = face.getHeadEulerAngleX();
+                euler[0][0][0][1] = face.getHeadEulerAngleY();
+                euler[0][0][0][2] = face.getHeadEulerAngleZ();
                 /**
                  * Left Eye
                  * */
@@ -297,12 +307,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         }
                     }
                 }
-//                /**
-//                 * Face
-//                 * */
-//                Rect facePos = face.getBoundingBox();
-//                float faceboxWsize = facePos.right - facePos.left;
-//                float faceboxHsize = facePos.bottom - facePos.top;
+                /**
+                 * Face
+                 * */
+                Rect facePos = face.getBoundingBox();
+                float faceboxWsize = facePos.right - facePos.left;
+                float faceboxHsize = facePos.bottom - facePos.top;
 //                Bitmap faceBitmap=Bitmap.createBitmap(image, (int)facePos.left,(int)facePos.top,(int)faceboxWsize, (int)faceboxHsize, matrix, false);
 //                faceBitmap = Bitmap.createScaledBitmap(faceBitmap, resolution,resolution,false);
 //                int[] face_pix = new int[resolution*resolution];
@@ -321,26 +331,41 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
 //                        }
 //                    }
 //                }
-//                /**
-//                 * Face Grid
-//                 * */
-//                int image_width = image.getWidth();
-//                int image_height = image.getHeight();
-//                //left, bottom, width, height
-//                float w_start = Math.round(grid_size*(facePos.left/(float)image_width));
-//                float h_start = Math.round(grid_size*(facePos.top/(float)image_height));
-//                float w_num = Math.round(grid_size*((faceboxWsize)/(float)image_width));
-//                float h_num = Math.round(grid_size*((faceboxHsize)/(float)image_height));
-//
-//                face_grid = new float[1][grid_size][grid_size][1];
-//                for(int h=0; h<grid_size; h++){
-//                    for(int w=0; w<grid_size; w++) {
-//                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
-//                            face_grid[0][h][(grid_size-1)-w][0] = 1;
-//                        }
-//                        else face_grid[0][h][(grid_size-1)-w][0] = 0;
-//                    }
-//                }
+                /**
+                 * Facepos
+                 * */
+                float faceCenterX = (facePos.right + facePos.left)/2.0f;
+                float faceCenterY = (facePos.bottom + facePos.top)/2.0f;
+                float face_X, face_Y;
+                if (graphicOverlay.isImageFlipped) {
+                    face_X = graphicOverlay.getWidth() - (faceCenterX * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset);
+                } else {
+                    face_X = faceCenterX * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset;
+                }
+                face_Y = faceCenterY * graphicOverlay.scaleFactor - graphicOverlay.postScaleHeightOffset;
+                facepos = new float[1][1][1][2];
+                facepos[0][0][0][0] = face_X;
+                facepos[0][0][0][1] = face_Y;
+                /**
+                 * Face Grid
+                 * */
+                int image_width = image.getWidth();
+                int image_height = image.getHeight();
+                //left, bottom, width, height
+                float w_start = Math.round(face_grid_size*(facePos.left/(float)image_width));
+                float h_start = Math.round(face_grid_size*(facePos.top/(float)image_height));
+                float w_num = Math.round(face_grid_size*((faceboxWsize)/(float)image_width));
+                float h_num = Math.round(face_grid_size*((faceboxHsize)/(float)image_height));
+
+                face_grid = new float[1][face_grid_size][face_grid_size][1];
+                for(int h=0; h<face_grid_size; h++){
+                    for(int w=0; w<face_grid_size; w++) {
+                        if (w>=w_start && w<=w_start+w_num && h>=h_start && h<=h_start+h_num){
+                            face_grid[0][h][(face_grid_size-1)-w][0] = 1;
+                        }
+                        else face_grid[0][h][(face_grid_size-1)-w][0] = 0;
+                    }
+                }
 
 //                /**
 //                 * Eye Grids
@@ -382,17 +407,26 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 /**
                  * Wrap them up to use them as input for TensorFlow Lite model
                  * */
-                //For jw_model.tflite
-                //float[][][][][] inputs = new float[][][][][]{left_4d, righteye_grid, right_4d, lefteye_grid};
-                //For ykmodel.tflite
-                //float[][][][][] inputs = new float[][][][][]{righteye_grid, left_4d, right_4d, lefteye_grid};
-                //For jw{ jitter_onlyeyes3.tflite onlyeyes.tflite } jb {jitter_onlyeyes.tflite onlyeyes.tflite }
-                float[][][][][] inputs = new float[][][][][]{left_4d, right_4d};
-                //For jw { jitter_onlyeyes.tflite }
-                //float[][][][][] inputs = new float[][][][][]{right_4d, left_4d};
-
-                //For MPiiFaceGaze, input is only face_input
-                //float[][][][] inputs = new float[][][][]{face_input};
+                if(USE_EULER) {
+                    //Only eyes and euler
+                    //inputs = new float[][][][][]{right_4d, left_4d, euler};
+                    //face grid - checkpoint
+                    //inputs = new float[][][][][]{euler, face_grid, left_4d, right_4d};
+                    //face grid - normal
+                    //inputs = new float[][][][][]{right_4d, face_grid, left_4d, euler};
+                    //inputs = new float[][][][][]{left_4d, right_4d, face_grid, euler};
+                    //fc_layer_opt
+                    //inputs = new float[][][][][]{euler, face_grid, right_4d, left_4d};
+                    //checkpoint fc_layer_opt
+                    //inputs = new float[][][][][]{face_grid, right_4d, euler, left_4d};
+                    //facepos
+                    //inputs = new float[][][][][]{face_grid, facepos, euler, left_4d, right_4d};
+                    //checkpoint facepos
+                    inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid};
+                }
+                else {
+                    inputs = new float[][][][][]{left_4d, right_4d};
+                }
 
                 // To use multiple input and multiple output you must use the Interpreter.runForMultipleInputsOutputs()
                 float[][] output = new float[1][2];
