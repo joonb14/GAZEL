@@ -25,7 +25,7 @@
         android:requestLegacyExternalStorage="true"
         android:largeHeap="true"
         android:name="androidx.multidex.MultiDexApplication"
-        android:icon="@drawable/logo_mlkit"
+        android:icon="@drawable/mobed_icon"
         android:label="@string/app_name"
         android:theme="@style/Theme.AppCompat">
 

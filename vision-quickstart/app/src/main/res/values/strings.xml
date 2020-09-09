@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MLKit-Vision</string>
+    <string name="app_name">MobiGaze</string>
     <string name="java_entry_title">Run the ML Kit quickstart written in Java</string>
     <string name="kotlin_entry_title">Run the ML Kit quickstart written in Kotlin</string>
     <string name="ok">OK</string>

@@ -57,11 +57,11 @@ TensorFlow Lite Conversion. Before you load your tflite model, you must check th
 In case you are using python interpreter,
 
 <pre><code>import tensorflow as tf
-
 tflite = tf.lite.Interpreter(model_path="path/to/model.tflite")
 tflite.get_input_details()
 </code></pre>
 example output will be
+
 <pre><code>[{'name': 'left_eye',
   'index': 4,
   'shape': array([ 1, 64, 64,  1], dtype=int32),
