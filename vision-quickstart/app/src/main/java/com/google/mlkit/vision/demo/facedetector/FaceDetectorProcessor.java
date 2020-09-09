@@ -76,6 +76,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private final boolean USE_EULER = true;
     private final boolean THREE_CHANNEL = false;
     private final boolean calibration_mode_SVR = false;
+    private final boolean CORNER_CALIBRATION = false;
     private static final float EYE_BOX_RATIO = 1.4f;
     private final double SACCADE_THRESHOLD = 300;
     private final int resolution = 64;
@@ -120,9 +121,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float bottom_right_mean_X, bottom_right_mean_Y;
     private float center_mean_X, center_mean_Y;
 
+    private float center_offset_X, center_offset_Y;
+    //CORNER CALIBRATION
     private float top_left_offset_X, top_left_offset_Y;
     private float bottom_right_offset_X, bottom_right_offset_Y;
-    private float center_offset_X, center_offset_Y;
+    //TRANSLATION & RESCALE CALIBRATION
+    private float tlxscale, tlyscale, trxscale, tryscale, blxscale, blyscale, brxscale, bryscale;
+
     private float calib_X, calib_Y;
     //Bitmap returns mirrored image so needs mirroring matrix at first
     private Matrix matrix;
@@ -522,11 +527,42 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                             calib_Y = outY;
                         }
                         else {
-                            // Calcuate Calibration Points
-                            float len_X = (float) dm.widthPixels;
-                            float len_Y = (float) dm.heightPixels;
-                            calib_X=((inputX-center_offset_X)/(bottom_right_offset_X-top_left_offset_X))*len_X+center_offset_X;
-                            calib_Y=((inputY-center_offset_Y)/(bottom_right_offset_Y-top_left_offset_Y))*len_Y+center_offset_Y;
+                            if(CORNER_CALIBRATION) {
+                                // Calcuate Calibration Points
+                                float len_X = (float) dm.widthPixels;
+                                float len_Y = (float) dm.heightPixels;
+                                calib_X = ((inputX - center_offset_X) / (bottom_right_offset_X - top_left_offset_X)) * len_X + center_offset_X;
+                                calib_Y = ((inputY - center_offset_Y) / (bottom_right_offset_Y - top_left_offset_Y)) * len_Y + center_offset_Y;
+                            }
+                            else {
+                                //TODO
+                                float len_X = (float) dm.widthPixels/2.0f;
+                                float len_Y = (float) dm.heightPixels/2.0f;
+                                float relx = yhatX-center_mean_X;
+                                float rely = yhatY-center_mean_Y;
+                                float a = relx+len_X;
+                                float b = rely+len_Y;
+                                if (relx <=0 && rely <=0 ){
+                                    //tlxscale, tlyscale
+                                    calib_X = a*tlxscale+len_X;
+                                    calib_Y = b*tlyscale+len_Y;
+                                }
+                                else if (relx>0 && rely<=0){
+                                    //trxscale, tryscale
+                                    calib_X = a*trxscale+len_X;
+                                    calib_Y = b*tryscale+len_Y;
+                                }
+                                else if (relx<=0 && rely>0){
+                                    //blxscale, blyscale
+                                    calib_X = a*blxscale+len_X;
+                                    calib_Y = b*blyscale+len_Y;
+                                }
+                                else if (relx>0 && rely>0){
+                                    //brxscale, bryscale
+                                    calib_X = a*brxscale+len_X;
+                                    calib_Y = b*bryscale+len_Y;
+                                }
+                            }
                         }
                         Log.d("MOBED_GazePoint_Calib","x:"+calib_X+" y:"+calib_Y);
                     }
@@ -581,17 +617,18 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 calibration_button.setVisibility(View.INVISIBLE);
                 GraphicOverlay maskOverlay = ((Activity)Fcontext).findViewById(R.id.mask_overlay);
                 maskOverlay.setVisibility(View.VISIBLE);
+                //if SACCADE this data is not suitable for calibration
+                if(isSaccade) continue;
                 Button calibration_point = (Button) ((Activity)Fcontext).findViewById(R.id.calibration_point);
                 calibration_point.setVisibility(View.VISIBLE);
                 RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams)calibration_point.getLayoutParams();
                 TextView calibration_instruction = (TextView) ((Activity)Fcontext).findViewById(R.id.calibration_instruction);
-                //if SACCADE this data is not suitable for calibration
-                if(isSaccade) continue;
                 // Calibration Phase
-                if(calibration_phase<FPS) {
+                if(calibration_phase<FPS*2) {
                     calibration_point.setVisibility(View.INVISIBLE);
                     calibration_instruction.setVisibility(View.VISIBLE);
-                    center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 5000;
+                    if(CORNER_CALIBRATION) center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 5000;
+                    else center_mean_X =  center_mean_Y = top_left_mean_X = top_left_mean_Y = bottom_left_mean_X = top_right_mean_Y = 0;
                     top_right_mean_X = bottom_left_mean_Y = bottom_right_mean_X = bottom_right_mean_Y = 0;
                 }
                 else if(calibration_phase<FPS*3) {
@@ -620,8 +657,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,0) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:"+normx+" 2:"+normy,"trainX");
                         appendLog("0 1:"+normx+" 2:"+normy,"trainY");
-                        if(top_left_mean_X > inputX) top_left_mean_X=inputX;
-                        if(top_left_mean_Y > inputY) top_left_mean_Y=inputY;
+                        if(CORNER_CALIBRATION) {
+                            if (top_left_mean_X > inputX) top_left_mean_X = inputX;
+                            if (top_left_mean_Y > inputY) top_left_mean_Y = inputY;
+                        }
+                        else {
+                            top_left_mean_X+=inputX;
+                            top_left_mean_Y+=inputY;
+                        }
                     }
                 }
                 else if(calibration_phase<FPS*5) {
@@ -634,8 +677,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.widthPixels,0) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("0 1:" + normx + " 2:" + normy, "trainY");
-                        if(top_right_mean_X < inputX) top_right_mean_X = inputX;
-                        if(top_right_mean_Y > inputY) top_right_mean_Y = inputY;
+                        if(CORNER_CALIBRATION) {
+                            if (top_right_mean_X < inputX) top_right_mean_X = inputX;
+                            if (top_right_mean_Y > inputY) top_right_mean_Y = inputY;
+                        }
+                        else {
+                            top_right_mean_X+=inputX;
+                            top_right_mean_Y+=inputY;
+                        }
                     }
                 }
                 else if(calibration_phase<FPS*6) {
@@ -648,8 +697,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (0,dm.heightPixels) but estimated point is (yhatX,yhatY)
                         appendLog("0 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
-                        if(bottom_left_mean_X > inputX) bottom_left_mean_X = inputX;
-                        if(bottom_left_mean_Y < inputY) bottom_left_mean_Y = inputY;
+                        if(CORNER_CALIBRATION) {
+                            if (bottom_left_mean_X > inputX) bottom_left_mean_X = inputX;
+                            if (bottom_left_mean_Y < inputY) bottom_left_mean_Y = inputY;
+                        }
+                        else {
+                            bottom_left_mean_X+=inputX;
+                            bottom_left_mean_Y+=inputY;
+                        }
                     }
                 }
                 else if(calibration_phase<FPS*7) {
@@ -662,8 +717,14 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         //subject staring at point (dm.heightPixels,widthPixels) but estimated point is (yhatX,yhatY)
                         appendLog("1 1:" + normx + " 2:" + normy, "trainX");
                         appendLog("1 1:" + normx + " 2:" + normy, "trainY");
-                        if(bottom_right_mean_X < inputX) bottom_right_mean_X = inputX;
-                        if(bottom_right_mean_Y < inputY) bottom_right_mean_Y = inputY;
+                        if(CORNER_CALIBRATION) {
+                            if (bottom_right_mean_X < inputX) bottom_right_mean_X = inputX;
+                            if (bottom_right_mean_Y < inputY) bottom_right_mean_Y = inputY;
+                        }
+                        else {
+                            bottom_right_mean_X+=inputX;
+                            bottom_right_mean_Y+=inputY;
+                        }
                     }
                 }
                 else if(calibration_phase<FPS*8) {
@@ -682,31 +743,71 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                             // Calculating
                             center_mean_X = center_mean_X / (float) (FPS - SKIP_FRAME);
                             center_mean_Y = center_mean_Y / (float) (FPS - SKIP_FRAME);
-//                            top_left_mean_X = top_left_mean_X / (float) (FPS - SKIP_FRAME);
-//                            top_left_mean_Y = top_left_mean_Y / (float) (FPS - SKIP_FRAME);
-//                            top_right_mean_X = top_right_mean_X / (float) (FPS - SKIP_FRAME);
-//                            top_right_mean_Y = top_right_mean_Y / (float) (FPS - SKIP_FRAME);
-//                            bottom_left_mean_X = bottom_left_mean_X / (float) (FPS - SKIP_FRAME);
-//                            bottom_left_mean_Y = bottom_left_mean_Y / (float) (FPS - SKIP_FRAME);
-//                            bottom_right_mean_X = bottom_right_mean_X / (float) (FPS - SKIP_FRAME);
-//                            bottom_right_mean_Y = bottom_right_mean_Y / (float) (FPS - SKIP_FRAME);
-                            Log.d("MOBED_CalibOffset","center_mean x:"+center_mean_X+" y:"+center_mean_Y);
-                            Log.d("MOBED_CalibOffset","top_left_mean x:"+top_left_mean_X+" y:"+top_left_mean_Y);
-                            Log.d("MOBED_CalibOffset","top_right_mean x:"+top_right_mean_X+" y:"+top_right_mean_Y);
-                            Log.d("MOBED_CalibOffset","bottom_left_mean x:"+bottom_left_mean_X+" y:"+bottom_left_mean_Y);
-                            Log.d("MOBED_CalibOffset","bottom_right_mean x:"+bottom_right_mean_X+" y:"+bottom_right_mean_Y);
-                            // offset values
-                            center_offset_X = center_mean_X;
-                            center_offset_Y = center_mean_Y;
-                            top_left_offset_X = (top_left_mean_X + bottom_left_mean_X) / 2.0f;
-                            top_left_offset_Y = (top_left_mean_Y + top_right_mean_Y) / 2.0f;
-                            bottom_right_offset_X = (top_right_mean_X + bottom_right_mean_X) / 2.0f;
-                            bottom_right_offset_Y = (bottom_left_mean_Y + bottom_right_mean_Y) / 2.0f;
-                            center_offset_X = (bottom_right_offset_X+top_left_offset_X)/2.0f;
-                            center_offset_Y = (bottom_right_offset_Y+top_left_offset_Y)/2.0f;
-                            Log.d("MOBED_CalibOffset","center_offset x:"+center_offset_X+" y:"+center_offset_Y);
-                            Log.d("MOBED_CalibOffset","top_left x:"+top_left_offset_X+" y:"+top_left_offset_Y);
-                            Log.d("MOBED_CalibOffset","bottom_right x:"+bottom_right_offset_X+" y:"+bottom_right_offset_Y);
+                            if(CORNER_CALIBRATION) {
+                                Log.d("MOBED_CalibOffset", "center_mean x:" + center_mean_X + " y:" + center_mean_Y);
+                                Log.d("MOBED_CalibOffset", "top_left_mean x:" + top_left_mean_X + " y:" + top_left_mean_Y);
+                                Log.d("MOBED_CalibOffset", "top_right_mean x:" + top_right_mean_X + " y:" + top_right_mean_Y);
+                                Log.d("MOBED_CalibOffset", "bottom_left_mean x:" + bottom_left_mean_X + " y:" + bottom_left_mean_Y);
+                                Log.d("MOBED_CalibOffset", "bottom_right_mean x:" + bottom_right_mean_X + " y:" + bottom_right_mean_Y);
+                                // offset values
+                                center_offset_X = center_mean_X;
+                                center_offset_Y = center_mean_Y;
+                                top_left_offset_X = (top_left_mean_X + bottom_left_mean_X) / 2.0f;
+                                top_left_offset_Y = (top_left_mean_Y + top_right_mean_Y) / 2.0f;
+                                bottom_right_offset_X = (top_right_mean_X + bottom_right_mean_X) / 2.0f;
+                                bottom_right_offset_Y = (bottom_left_mean_Y + bottom_right_mean_Y) / 2.0f;
+                                center_offset_X = (bottom_right_offset_X + top_left_offset_X) / 2.0f;
+                                center_offset_Y = (bottom_right_offset_Y + top_left_offset_Y) / 2.0f;
+                                Log.d("MOBED_CalibOffset", "center_offset x:" + center_offset_X + " y:" + center_offset_Y);
+                                Log.d("MOBED_CalibOffset", "top_left x:" + top_left_offset_X + " y:" + top_left_offset_Y);
+                                Log.d("MOBED_CalibOffset", "bottom_right x:" + bottom_right_offset_X + " y:" + bottom_right_offset_Y);
+                            }
+                            else {
+                                //TODO
+                                top_left_mean_X = top_left_mean_X / (float) (FPS - SKIP_FRAME);
+                                top_left_mean_Y = top_left_mean_Y / (float) (FPS - SKIP_FRAME);
+                                top_right_mean_X = top_right_mean_X / (float) (FPS - SKIP_FRAME);
+                                top_right_mean_Y = top_right_mean_Y / (float) (FPS - SKIP_FRAME);
+                                bottom_left_mean_X = bottom_left_mean_X / (float) (FPS - SKIP_FRAME);
+                                bottom_left_mean_Y = bottom_left_mean_Y / (float) (FPS - SKIP_FRAME);
+                                bottom_right_mean_X = bottom_right_mean_X / (float) (FPS - SKIP_FRAME);
+                                bottom_right_mean_Y = bottom_right_mean_Y / (float) (FPS - SKIP_FRAME);
+                                Log.d("MOBED_CalibOffset", "center_mean x:" + center_mean_X + " y:" + center_mean_Y);
+                                Log.d("MOBED_CalibOffset", "top_left_mean x:" + top_left_mean_X + " y:" + top_left_mean_Y);
+                                Log.d("MOBED_CalibOffset", "top_right_mean x:" + top_right_mean_X + " y:" + top_right_mean_Y);
+                                Log.d("MOBED_CalibOffset", "bottom_left_mean x:" + bottom_left_mean_X + " y:" + bottom_left_mean_Y);
+                                Log.d("MOBED_CalibOffset", "bottom_right_mean x:" + bottom_right_mean_X + " y:" + bottom_right_mean_Y);
+                                // offset values
+                                center_offset_X = center_mean_X;
+                                center_offset_Y = center_mean_Y;
+                                float cx = dm.widthPixels/2.0f;
+                                float cy = dm.heightPixels/2.0f;
+                                //translate (cx,cy) to be an origin (0,0)
+                                center_offset_X -= cx;
+                                top_left_mean_X -= cx;
+                                top_right_mean_X -= cx;
+                                bottom_left_mean_X -= cx;
+                                bottom_right_mean_X -= cx;
+                                center_offset_Y -= cy;
+                                top_left_mean_Y -= cy;
+                                top_right_mean_Y -= cy;
+                                bottom_left_mean_Y -= cy;
+                                bottom_right_mean_Y -= cy;
+                                //scaling values
+                                tlxscale = Math.abs(cx/(center_offset_X - top_left_mean_X));
+                                tlyscale = Math.abs(cy/(center_offset_Y - top_left_mean_Y));
+                                trxscale = Math.abs(cx/(top_right_mean_X-center_offset_X));
+                                tryscale = Math.abs(cy/(center_offset_Y - top_right_mean_Y));
+                                blxscale = Math.abs(cx/(center_offset_X - bottom_left_mean_X));
+                                blyscale = Math.abs(cy/(bottom_left_mean_Y - center_offset_Y));
+                                brxscale = Math.abs(cx/(bottom_right_mean_X - center_offset_X));
+                                bryscale = Math.abs(cy/(bottom_right_mean_Y - center_offset_Y));
+
+                                Log.d("MOBED_CalibOffset", "tl x:" + tlxscale + " y:" + tlyscale);
+                                Log.d("MOBED_CalibOffset", "tr x:" + trxscale + " y:" + tryscale);
+                                Log.d("MOBED_CalibOffset", "bl x:" + blxscale + " y:" + blyscale);
+                                Log.d("MOBED_CalibOffset", "br x:" + brxscale + " y:" + bryscale);
+                            }
                         }
                         // Calibration Done
                         calibration_model_exist = true;
