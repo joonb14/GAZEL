@@ -13,7 +13,7 @@ Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ### Gaze Estimation Model
 stored in asset folder. Created with Keras, converted to tflite.<br>
-named "facepos.tflite" model has best accuracy<br>
+named <b>"checkpoint/facepos.tflite"</b> model has best accuracy<br>
 You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 ### Working on...
 MobiGaze uses Personalized model. This example is based on my Data(Wearing glasses). So would not work well on other person.<br>
