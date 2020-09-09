@@ -198,6 +198,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
          * And all terms in face detection would follow direction of camera preview image
          * */
         for (Face face : faces) {
+            if (face != faces.get(0)) break;
             //MOBED
             //This is how you get coordinates, and crop left and right eye
             //Look at https://firebase.google.com/docs/ml-kit/detect-faces#example_2_face_contour_detection for details.
