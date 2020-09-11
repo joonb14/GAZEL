@@ -41,24 +41,24 @@ Keras model training & conversion Code will be uploaded soon.<br>
 If you want to use custom TFLite model with our MobiGaze Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
 We used 1-channel bitmap for enhancing gaze estimation accuracy, but like other papers which use 3-channel RGB images as input, we provide 3-channel image mode. You can change the mode with THREE-CHANNEL flag. 
 <pre><code>private final boolean USE_EULER = true; // true: use euler x,y,z as input
-    private final boolean USE_FACE = false; // true: use face x,y,z as input
-    private final boolean USE_EYEGRID = false; // true: use eye_grid as input
-    private final boolean USE_FACEGRID = true; // true: use face_grid as input
-    private final boolean THREE_CHANNEL = false; // false for Black and White image, true for RGB image
-    private final boolean calibration_mode_SVR = false; // false for translation & rescale. true for SVR
-    private final boolean CORNER_CALIBRATION = false; // false for translation & rescale with center, true for only 4 corners
+private final boolean USE_FACE = false; // true: use face x,y,z as input
+private final boolean USE_EYEGRID = false; // true: use eye_grid as input
+private final boolean USE_FACEGRID = true; // true: use face_grid as input
+private final boolean THREE_CHANNEL = false; // false for Black and White image, true for RGB image
+private final boolean calibration_mode_SVR = false; // false for translation & rescale. true for SVR
+private final boolean CORNER_CALIBRATION = false; // false for translation & rescale with center, true for only 4 corners
 </code></pre>
 Above configuration flags are about  switching modes, now below configuration values are specific values for initializing modes.
 <pre><code>private final double SACCADE_THRESHOLD = 300; // distance for classifying FIXATION and SACCADE
-    private final int resolution = 64; // for eye and face
-    private final int grid_size = 50; // for eye_grids
-    private final int face_grid_size = 25; // for face_grid
-    private final int FPS = 30; // for calibration count
-    private final int SKIP_FRAME = 10; // for calibration count
-    private final int COST = 100; // for SVR
-    private final int GAMMA = 20; // for SVR
-    private final int QUEUE_SIZE = 20; // for moving average
-    private final float EYE_OPEN_PROB = 0.0f; //empirical value
+private final int resolution = 64; // for eye and face
+private final int grid_size = 50; // for eye_grids
+private final int face_grid_size = 25; // for face_grid
+private final int FPS = 30; // for calibration count
+private final int SKIP_FRAME = 10; // for calibration count
+private final int COST = 100; // for SVR
+private final int GAMMA = 20; // for SVR
+private final int QUEUE_SIZE = 20; // for moving average
+private final float EYE_OPEN_PROB = 0.0f; //empirical value
 </code></pre>
 To use custom TFLite model, you must change these values first.
 In <b>LivePreviewActivity.java</b>, change
@@ -115,20 +115,20 @@ This work is based on Tablet devices. So if you want to use this framework on Sm
 * Fifth, follow the instructions below
 Change the configuration options below(in <b>FaceDetectorProcessor.java</b> ) with your Target device spec.
 <pre><code> private final boolean isCustomDevice = false;
-    //custom device
-    private final float customDeviceWidthPixel = 1440.0f;
-    private final float customDeviceWidthCm = 7.0f;
-    private final float customDeviceHeightPixel = 2960.0f;
-    private final float customDeviceHeightCm = 13.8f;
-    private final float customDeviceCameraXPos = 4.8f; // in cm | at Android coordinate system where use top left corner as (0,0)
-    private final float customDeviceCameraYPos = -0.3f; // in cm | at Android coordinate system where use top left corner as (0,0)
-    //original device
-    private final float originalDeviceWidthPixel = 1600.0f;
-    private final float originalDeviceWidthCm = 14.2f;
-    private final float originalDeviceHeightPixel = 2560.0f;
-    private final float originalDeviceHeightCm = 22.5f;
-    private final float originalDeviceCameraXPos = 7.1f; // in cm | at Android coordinate system where use top left corner as (0,0)
-    private final float originalDeviceCameraYPos = -0.5f; // in cm | at Android coordinate system where use top left corner as (0,0)
+//custom device
+private final float customDeviceWidthPixel = 1440.0f;
+private final float customDeviceWidthCm = 7.0f;
+private final float customDeviceHeightPixel = 2960.0f;
+private final float customDeviceHeightCm = 13.8f;
+private final float customDeviceCameraXPos = 4.8f; // in cm | at Android coordinate system where use top left corner as (0,0)
+private final float customDeviceCameraYPos = -0.3f; // in cm | at Android coordinate system where use top left corner as (0,0)
+//original device
+private final float originalDeviceWidthPixel = 1600.0f;
+private final float originalDeviceWidthCm = 14.2f;
+private final float originalDeviceHeightPixel = 2560.0f;
+private final float originalDeviceHeightCm = 22.5f;
+private final float originalDeviceCameraXPos = 7.1f; // in cm | at Android coordinate system where use top left corner as (0,0)
+private final float originalDeviceCameraYPos = -0.5f; // in cm | at Android coordinate system where use top left corner as (0,0)
 </code></pre>
 set the <b>isCustomDevice</b> flag to true, then change all of the <b>customDevice[option]</b> values
 
