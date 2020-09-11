@@ -10,6 +10,9 @@ Collaborators: <br>
 This work is based on Galaxy Tab S6. <br>
 We trained model with data collected using  <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a><br>
 We also provide a method to utilize our Tablet model to Smartphones by calibration.<br>
+Red dot represent "Raw Gaze Estimation Output"<br>
+Blue dot represent "Moving Averaged Output" (if Calibration is done, moving average on calibrated output, else on raw output)<br>
+Green dot represent "Calibrated Raw Output"<br>
 Trained with Galaxy Tab S6 data ,tested on Galaxy Tab S6<br>
 [![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=rhO5kjTn0Ts)<br>
 Trained with Galaxy Tab S6 data, tested and calibrated on Galaxy S9+<br>
@@ -25,13 +28,13 @@ Model is stored in asset folder. Created with Keras, converted to tflite.<br>
 named <b>"checkpoint/illum_facepos.tflite"</b> model has best accuracy<br>
 You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
 
-### Working on...
-MobiGaze uses Personalized model. This example is based on my Data(Wearing glasses). So would not work well on other person.<br>
-Now working on Calibration. Typically we are going to use 5 points calibration with translation, and rescaling.<br>
+### Worked on...
+MobiGaze uses <b>Personalized model</b>. This example is based on my Data(Wearing glasses). So would not work well on other person.(Have already tested...)<br>
+We used  5 points calibration with translation, and rescaling.<br>
 5 points are TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
-We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for x and y coordinate.<br>
-However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration point than 5. <br>
-So we use default calibration method with translation, and rescaling.<br>
+We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for each x and y coordinate.<br>
+However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration points than 5. <br>
+So we are using translation, and rescaling as default calibration method.<br>
 Keras model training & conversion Code will be uploaded soon.<br>
 
 ## TFLite Configuration<a id="tflite_config"></a>
