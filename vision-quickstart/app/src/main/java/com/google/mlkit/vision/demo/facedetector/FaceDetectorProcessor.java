@@ -70,8 +70,28 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
 
 /**
  * MobiGaze: Personalized Mobile Gaze Tracker
+ * Based on Galaxy Tab S6
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
+    /**
+     * Cross-Phone Implementation
+     * tested with Galaxy S9+
+     * */
+    private final boolean isCustomDevice = false;
+    //custom device
+    private final float customDeviceWidthPixel = 1440.0f;
+    private final float customDeviceWidthCm = 7.0f;
+    private final float customDeviceHeightPixel = 2960.0f;
+    private final float customDeviceHeightCm = 13.8f;
+    private final float customDeviceCameraXPos = 4.8f; // in cm | at Android coordinate system where use top left corner as (0,0)
+    private final float customDeviceCameraYPos = -0.3f; // in cm | at Android coordinate system where use top left corner as (0,0)
+    //original device
+    private final float originalDeviceWidthPixel = 1600.0f;
+    private final float originalDeviceWidthCm = 14.2f;
+    private final float originalDeviceHeightPixel = 2560.0f;
+    private final float originalDeviceHeightCm = 22.5f;
+    private final float originalDeviceCameraXPos = 7.1f; // in cm | at Android coordinate system where use top left corner as (0,0)
+    private final float originalDeviceCameraYPos = -0.5f; // in cm | at Android coordinate system where use top left corner as (0,0)
     /**
      * Config Modes
      * */
@@ -140,6 +160,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float tlxscale, tlyscale, trxscale, tryscale, blxscale, blyscale, brxscale, bryscale;
 
     private float calib_X, calib_Y;
+    private Queue calib_Xqueue, calib_Yqueue;
+    private float calib_moving_average_X, calib_moving_average_Y;
     //Bitmap returns mirrored image so needs mirroring matrix at first
     private Matrix matrix;
 
@@ -167,6 +189,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
         matrix.setValues(mirrorY);
         Xqueue = new Queue(QUEUE_SIZE);
         Yqueue = new Queue(QUEUE_SIZE);
+        calib_Xqueue = new Queue(QUEUE_SIZE);
+        calib_Yqueue = new Queue(QUEUE_SIZE);
         calibration_button.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -448,8 +472,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     //inputs = new float[][][][][]{face_grid, right_4d, euler, left_4d};
                     //facepos
                     //inputs = new float[][][][][]{face_grid, facepos, euler, left_4d, right_4d};
+                    //checkpoint rgb_facepos
+                    //inputs = new float[][][][][]{facepos, face_grid, euler, right_4d, left_4d};
+                    //checkpoint illum_facepos
+                    inputs = new float[][][][][]{left_4d, euler, facepos, face_grid, right_4d};
                     //checkpoint facepos
-                    inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid};
+                    //inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid};
                 }
                 else {
                     inputs = new float[][][][][]{left_4d, right_4d};
@@ -479,7 +507,21 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
-
+                    if(isCustomDevice) {
+                        //TODO
+                        Log.d("CROSSDEVICE","yhatX,yhatY: (" + yhatX+","+yhatY+")");
+                        float a = yhatX - (originalDeviceWidthPixel*customDeviceCameraXPos)/originalDeviceWidthCm;
+                        float b = yhatY - (originalDeviceHeightPixel*customDeviceCameraYPos)/originalDeviceHeightCm;
+                        Log.d("CROSSDEVICE","a,b: (" + a+","+b+")");
+                        float aprime = a * (originalDeviceWidthCm/originalDeviceWidthPixel)*(customDeviceWidthPixel/customDeviceWidthCm);
+                        float bprime = b * (originalDeviceHeightCm/originalDeviceHeightPixel)*(customDeviceHeightPixel/customDeviceHeightCm);
+                        Log.d("CROSSDEVICE","aprime,bprime: (" + aprime+","+bprime+")");
+                        float resultX = aprime + (customDeviceWidthPixel*originalDeviceCameraXPos)/customDeviceWidthCm;
+                        float resultY = bprime + (customDeviceHeightPixel*originalDeviceCameraYPos)/customDeviceHeightCm;
+                        Log.d("CROSSDEVICE","resultX,resultY: (" + resultX+","+resultY+")");
+                        yhatX = resultX;
+                        yhatY = resultY;
+                    }
 
                     /**
                      * MOBED Moving Average Implementation
@@ -552,7 +594,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                                 calib_Y = ((inputY - center_offset_Y) / (bottom_right_offset_Y - top_left_offset_Y)) * len_Y + center_offset_Y;
                             }
                             else {
-                                //TODO
+                                //TODO 5- Point Calibration
                                 float len_X = (float) dm.widthPixels/2.0f;
                                 float len_Y = (float) dm.heightPixels/2.0f;
                                 float relx = yhatX-center_mean_X;
@@ -578,6 +620,30 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                                     //brxscale, bryscale
                                     calib_X = a*brxscale+len_X;
                                     calib_Y = b*bryscale+len_Y;
+                                }
+                                if(!calib_Xqueue.isFull()){
+                                    calib_Xqueue.queueEnqueue(calib_X);
+                                    calib_Yqueue.queueEnqueue(calib_Y);
+                                    if(calib_Xqueue.isFull()) {
+                                        float xSum = 0, ySum = 0;
+                                        for (int i = 0; i < calib_Xqueue.capacity; i++) {
+                                            xSum += calib_Xqueue.queue[i];
+                                            ySum += calib_Yqueue.queue[i];
+                                        }
+                                        calib_moving_average_X = xSum / (float) QUEUE_SIZE;
+                                        calib_moving_average_Y = ySum / (float) QUEUE_SIZE;
+                                    }
+                                }
+                                else {
+                                    calib_Xqueue.queueDequeue();
+                                    calib_Yqueue.queueDequeue();
+                                    calib_Xqueue.queueEnqueue(calib_X);
+                                    calib_Yqueue.queueEnqueue(calib_Y);
+
+
+                                    calib_moving_average_X = calib_moving_average_X*0.6f+calib_X*0.4f;
+                                    calib_moving_average_Y = calib_moving_average_Y*0.6f+calib_Y*0.4f;
+                                    //Log.d(TAG,"Queue("+moving_average_X+","+moving_average_Y+")");
                                 }
                             }
                         }
@@ -843,7 +909,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 calibration_point.setVisibility(View.INVISIBLE);
                 calibration_button.setVisibility(View.VISIBLE);
                 calibration_button.setText(R.string.calibration);
-                graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, moving_average_X, moving_average_Y,calib_X,calib_Y));
+                if(calib_Xqueue.isFull()) {
+                    graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, calib_X, calib_Y, calib_moving_average_X, calib_moving_average_Y));
+                }
+                else {
+                    graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, moving_average_X, moving_average_Y, calib_X, calib_Y));
+                }
             }
 
 
