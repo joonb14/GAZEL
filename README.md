@@ -35,7 +35,7 @@ We used  5 points calibration with translation, and rescaling.<br>
 We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for each x and y coordinate.<br>
 However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration points than 5. <br>
 So we are using translation, and rescaling as default calibration method.<br>
-Keras model training & conversion Code will be uploaded soon.<br>
+Keras model training & conversion Code is provided in <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.<br>
 
 ## TFLite Configuration<a id="tflite_config"></a>
 If you want to use custom TFLite model with our MobiGaze Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
