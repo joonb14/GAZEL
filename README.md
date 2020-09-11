@@ -6,9 +6,12 @@ Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
 <a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
+## Sample Videos
 
-[![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=rhO5kjTn0Ts)
-[![S9+](https://img.youtube.com/vi/Q9bBMK_hWq4/0.jpg)](https://www.youtube.com/watch?v=Q9bBMK_hWq4)
+Trained with Galaxy Tab S6 data ,tested on Galaxy Tab S6<br>
+[![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=rhO5kjTn0Ts)<br>
+Trained with Galaxy Tab S6 data, tested and calibrated on Galaxy S9+<br>
+[![S9+](https://img.youtube.com/vi/Q9bBMK_hWq4/0.jpg)](https://www.youtube.com/watch?v=Q9bBMK_hWq4)<br>
 
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
@@ -26,6 +29,7 @@ We also tried to provide SVR calibration. However, multi output SVR doesn't exis
 However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration point than 5. <br>
 So we use default calibration method with translation, and rescaling.<br>
 Keras model training & conversion Code will be uploaded soon.<br>
+
 ### Configuration
 If you want to use custom TFLite model with our MobiGaze Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
 We used 1-channel bitmap for enhancing gaze estimation accuracy, but like other papers which use 3-channel RGB images as input, we provide 3-channel image mode. You can change the mode with THREE-CHANNEL flag. 
