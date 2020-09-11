@@ -23,7 +23,7 @@ Also deleted most of the source code that is not needed<br>
 Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
 ## Details
 ### Gaze Estimation Model
-![model](https://user-images.githubusercontent.com/30307587/92886060-4f1abc00-f44e-11ea-9e78-28f7a6300ab8.png)
+![model](https://user-images.githubusercontent.com/30307587/92891195-b76b9c80-f452-11ea-864e-582b0095766a.png)
 Model is stored in asset folder. Created with Keras, converted to tflite.<br>
 named <b>"checkpoint/illum_facepos.tflite"</b> model has best accuracy<br>
 You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
