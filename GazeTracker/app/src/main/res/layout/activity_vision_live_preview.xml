@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="RtlHardcoded"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000"
+    android:keepScreenOn="true"
+    android:orientation="vertical">
+
+  <com.google.mlkit.vision.demo.CameraSourcePreview
+      android:id="@+id/preview"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_alignParentLeft="true"
+      android:layout_alignParentTop="true">
+
+    <com.google.mlkit.vision.demo.GraphicOverlay
+        android:id="@+id/graphic_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"/>
+
+  </com.google.mlkit.vision.demo.CameraSourcePreview>
+  <Button
+      android:id="@+id/calibration"
+      android:layout_width="170dp"
+      android:layout_height="50dp"
+      android:layout_alignParentBottom="true"
+      android:layout_alignParentRight="true"
+      android:text="@string/calibration"
+      android:textSize="20sp">
+  </Button>
+  <com.google.mlkit.vision.demo.GraphicOverlay
+      android:id="@+id/mask_overlay"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:layout_alignParentBottom="true"
+      android:layout_alignParentLeft="true"
+      android:layout_alignParentTop="true"
+      android:background="#000000"
+      android:visibility="invisible">
+  </com.google.mlkit.vision.demo.GraphicOverlay>
+  <TextView
+      android:id="@+id/calibration_instruction"
+      android:layout_width="match_parent"
+      android:layout_height="150dp"
+      android:layout_margin="10dp"
+      android:layout_centerHorizontal="true"
+      android:layout_centerVertical="true"
+      android:text="@string/instruction"
+      android:textSize="40sp"
+      android:gravity="center"
+      android:textColor="#FFFFFF"
+      android:visibility="invisible">
+  </TextView>
+  <Button
+      android:id="@+id/calibration_point"
+      android:layout_width="40dp"
+      android:layout_height="40dp"
+      android:layout_margin="10dp"
+      android:background="@drawable/style_circular_button"
+      android:layout_centerHorizontal="true"
+      android:layout_centerVertical="true"
+      android:layout_alignParentTop="true"
+      android:layout_alignParentBottom="false"
+      android:layout_alignParentLeft="true"
+      android:layout_alignParentRight="false"
+      android:visibility="invisible">
+  </Button>
+
+</RelativeLayout>

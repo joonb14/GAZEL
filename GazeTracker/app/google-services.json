@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "421372490474",
+    "firebase_url": "https://mobigaze.firebaseio.com",
+    "project_id": "mobigaze",
+    "storage_bucket": "mobigaze.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:421372490474:android:6de66840625cd8ea269d93",
+        "android_client_info": {
+          "package_name": "com.google.mlkit.vision.demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "421372490474-74hb5l5f21vipt6mn439jtivhtbam2r3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArm4eAJImKYpUW4Ged54oeSh549-kvRzo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "421372490474-74hb5l5f21vipt6mn439jtivhtbam2r3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
