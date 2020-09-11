@@ -114,7 +114,7 @@ This work is based on Tablet devices. So if you want to use this framework on Sm
 * Fourth, you need to follow [TFLite Configuration](#tflite_config)
 * Fifth, follow the instructions below
 Change the configuration options below(in <b>FaceDetectorProcessor.java</b> ) with your Target device spec.
-<pre><code> private final boolean isCustomDevice = false;
+<pre><code>private final boolean isCustomDevice = false;
 //custom device
 private final float customDeviceWidthPixel = 1440.0f;
 private final float customDeviceWidthCm = 7.0f;
