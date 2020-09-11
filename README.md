@@ -7,8 +7,8 @@ Collaborators: <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
 <a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
 
-[![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=https://youtu.be/rhO5kjTn0Ts)
-[![S9+](https://img.youtube.com/vi/Q9bBMK_hWq4/0.jpg)](https://www.youtube.com/watch?v=https://https://youtu.be/Q9bBMK_hWq4)
+[![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=rhO5kjTn0Ts)
+[![S9+](https://img.youtube.com/vi/Q9bBMK_hWq4/0.jpg)](https://www.youtube.com/watch?v=Q9bBMK_hWq4)
 
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
