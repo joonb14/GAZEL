@@ -220,7 +220,8 @@ public final class LivePreviewActivity extends AppCompatActivity
                                             //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/fc_layer_opt.tflite");
                                             //InputStream inputStream = getAssets().open("custom_models/TabS6/facepos.tflite");
                                             //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/rgb_facepos.tflite");
-                                            InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/illum_facepos.tflite");
+                                            InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/sage.tflite");
+                                            //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/illum_facepos.tflite");
                                             //InputStream inputStream = getAssets().open("custom_models/TabS6/checkpoint/facepos.tflite");
 
                                             byte[] model = new byte[inputStream.available()];

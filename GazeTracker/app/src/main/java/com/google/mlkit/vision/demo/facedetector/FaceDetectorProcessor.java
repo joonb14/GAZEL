@@ -475,9 +475,11 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     //checkpoint rgb_facepos
                     //inputs = new float[][][][][]{facepos, face_grid, euler, right_4d, left_4d};
                     //checkpoint illum_facepos
-                    inputs = new float[][][][][]{left_4d, euler, facepos, face_grid, right_4d};
+                    //inputs = new float[][][][][]{left_4d, euler, facepos, face_grid, right_4d};
                     //checkpoint facepos
                     //inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid};
+                    //checkpoint sage
+                    inputs = new float[][][][][]{facepos, left_4d, face_grid, euler, right_4d};
                 }
                 else {
                     inputs = new float[][][][][]{left_4d, right_4d};
