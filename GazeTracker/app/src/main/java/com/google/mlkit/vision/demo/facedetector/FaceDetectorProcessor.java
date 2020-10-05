@@ -73,11 +73,12 @@ import umich.cse.yctung.androidlibsvm.LibSVM;
  * Based on Galaxy Tab S6
  */
 public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
+    private final boolean isGAZEL = true;
     /**
      * Cross-Phone Implementation
      * tested with Galaxy S9+
      * */
-    private final boolean isCustomDevice = false;
+    private final boolean isCustomDevice = true;
     //custom device
     private final float customDeviceWidthPixel = 1440.0f;
     private final float customDeviceWidthCm = 7.0f;
@@ -98,21 +99,23 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private final boolean USE_EULER = true; // true: use euler x,y,z as input
     private final boolean USE_FACE = false; // true: use face x,y,z as input
     private final boolean USE_EYEGRID = false; // true: use eye_grid as input
-    private final boolean USE_FACEGRID = true; // true: use face_grid as input
+    private final boolean USE_FACEGRID = false; // true: use face_grid as input
     private final boolean THREE_CHANNEL = false; // false for Black and White image, true for RGB image
     private final boolean calibration_mode_SVR = false; // false for translation & rescale. true for SVR
     private final boolean CORNER_CALIBRATION = false; // false for translation & rescale with center, true for only 4 corners
     /**
      * Config Values
      * */
+    private final float CANVAS_WIDTH = 1348.0f; // for eye and face
+    private final float CANVAS_HEIGHT = 2398.0f; // for eye and face
     private final double SACCADE_THRESHOLD = 300; // distance for classifying FIXATION and SACCADE
     private final int resolution = 64; // for eye and face
     private final int grid_size = 50; // for eye_grids
     private final int face_grid_size = 25; // for face_grid
     private final int FPS = 30; // for calibration count
     private final int SKIP_FRAME = 10; // for calibration count
-    private final int COST = 100; // for SVR
-    private final int GAMMA = 20; // for SVR
+    private final int COST = 40; // for SVR
+    private final float GAMMA = 0.3f; // for SVR
     private final int QUEUE_SIZE = 20; // for moving average
     private final float EYE_OPEN_PROB = 0.0f; //empirical value
     /**
@@ -129,7 +132,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private RenderScript RS;
     private ScriptC_singlesource script;
 
-    private float[][][][] left_4d, right_4d, face_grid, lefteye_grid, righteye_grid ,face_input, euler, facepos;
+    private float[][][][] left_4d, right_4d, face_grid, lefteye_grid, righteye_grid ,face_input, euler, facepos, right_eye_right_top, left_eye_left_bottom, right_eye_left_bottom, left_eye_right_top;
     //private float[][][] face_input;
     float[][][][][] inputs;
 
@@ -241,6 +244,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
          * Real "Left eye" would be "Right eye" in the face detection. Because camera is left and right reversed.
          * And all terms in face detection would follow direction of camera preview image
          * */
+        Log.d("LATENCY","Face Detected");
         for (Face face : faces) {
             if (face != faces.get(0)) break;
             //MOBED
@@ -355,8 +359,48 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     }
                 }
                 /**
+                 * Left, Right Eye Contour for SAGE
+                 * */
+
+                if (graphicOverlay.isImageFlipped) {
+                    leftEyeleft = graphicOverlay.getWidth() - (leftEyeleft * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset);
+                    leftEyeright = graphicOverlay.getWidth() - (leftEyeright * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset);
+                    rightEyeleft = graphicOverlay.getWidth() - (rightEyeleft * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset);
+                    rightEyeright = graphicOverlay.getWidth() - (rightEyeright * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset);
+                } else {
+                    leftEyeleft = leftEyeleft * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset;
+                    leftEyeright = leftEyeright * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset;
+                    rightEyeleft = rightEyeleft * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset;
+                    rightEyeright = rightEyeright * graphicOverlay.scaleFactor - graphicOverlay.postScaleWidthOffset;
+                }
+                rightEyebottom = rightEyebottom * graphicOverlay.scaleFactor - graphicOverlay.postScaleHeightOffset;
+                rightEyetop = rightEyetop * graphicOverlay.scaleFactor - graphicOverlay.postScaleHeightOffset;
+                leftEyebottom = leftEyebottom * graphicOverlay.scaleFactor - graphicOverlay.postScaleHeightOffset;
+                leftEyetop = leftEyetop * graphicOverlay.scaleFactor - graphicOverlay.postScaleHeightOffset;
+                right_eye_right_top = new float[1][1][1][2];
+                right_eye_right_top[0][0][0][0] = rightEyeright/CANVAS_WIDTH;
+                right_eye_right_top[0][0][0][1] = rightEyetop/CANVAS_HEIGHT;
+                left_eye_left_bottom = new float[1][1][1][2];
+                left_eye_left_bottom[0][0][0][0] = leftEyeleft/CANVAS_WIDTH;
+                left_eye_left_bottom[0][0][0][1] = leftEyebottom/CANVAS_HEIGHT;
+                right_eye_left_bottom = new float[1][1][1][2];
+                right_eye_left_bottom[0][0][0][0] = rightEyeleft/CANVAS_WIDTH;
+                right_eye_left_bottom[0][0][0][1] = rightEyebottom/CANVAS_HEIGHT;
+                left_eye_right_top = new float[1][1][1][2];
+                left_eye_right_top[0][0][0][0] = leftEyeright/CANVAS_WIDTH;
+                left_eye_right_top[0][0][0][1] = leftEyetop/CANVAS_HEIGHT;
+                if(isGAZEL) {
+                    right_eye_right_top[0][0][0][1] = right_eye_right_top[0][0][0][1] - right_eye_left_bottom[0][0][0][1];
+                    right_eye_right_top[0][0][0][0] = right_eye_left_bottom[0][0][0][0] - right_eye_right_top[0][0][0][0];
+                    left_eye_right_top[0][0][0][1] = left_eye_right_top[0][0][0][1] - left_eye_left_bottom[0][0][0][1];
+                    left_eye_right_top[0][0][0][0] = left_eye_left_bottom[0][0][0][0] - left_eye_right_top[0][0][0][0];
+                    Log.d("VALUE_CHECK", "right_eye_right_top: "+ right_eye_right_top[0][0][0][0] +","+right_eye_right_top[0][0][0][1]);
+                    Log.d("VALUE_CHECK", "left_eye_right_top: "+ left_eye_right_top[0][0][0][0] +","+left_eye_right_top[0][0][0][1]);
+                }
+                /**
                  * Face
                  * */
+                //int resolution = 224;
                 Rect facePos = face.getBoundingBox();
                 float faceboxWsize = facePos.right - facePos.left;
                 float faceboxHsize = facePos.bottom - facePos.top;
@@ -458,28 +502,40 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 /**
                  * Wrap them up to use them as input for TensorFlow Lite model
                  * */
+                Log.d("LATENCY","Input Parced");
                 if(USE_EULER) {
-                    //Only eyes and euler
-                    //inputs = new float[][][][][]{right_4d, left_4d, euler};
-                    //face grid - checkpoint
-                    //inputs = new float[][][][][]{euler, face_grid, left_4d, right_4d};
-                    //face grid - normal
-                    //inputs = new float[][][][][]{right_4d, face_grid, left_4d, euler};
-                    //inputs = new float[][][][][]{left_4d, right_4d, face_grid, euler};
-                    //fc_layer_opt
-                    //inputs = new float[][][][][]{euler, face_grid, right_4d, left_4d};
-                    //checkpoint fc_layer_opt
-                    //inputs = new float[][][][][]{face_grid, right_4d, euler, left_4d};
-                    //facepos
-                    //inputs = new float[][][][][]{face_grid, facepos, euler, left_4d, right_4d};
-                    //checkpoint rgb_facepos
-                    //inputs = new float[][][][][]{facepos, face_grid, euler, right_4d, left_4d};
-                    //checkpoint illum_facepos
-                    //inputs = new float[][][][][]{left_4d, euler, facepos, face_grid, right_4d};
-                    //checkpoint facepos
-                    //inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid};
-                    //checkpoint sage
-                    inputs = new float[][][][][]{facepos, left_4d, face_grid, euler, right_4d};
+                    //gazel_shared
+                    //inputs = new float[][][][][]{right_eye_right_top, left_4d, euler, right_4d, facepos, left_eye_right_top};
+                    //gazel_shared_ver2
+                    //inputs = new float[][][][][]{right_eye_right_top, euler, facepos, left_eye_right_top, left_4d, right_4d};
+                    //gazel_shared_ver9
+                    inputs = new float[][][][][]{facepos, right_4d, left_eye_right_top, euler, right_eye_right_top, left_4d};
+                    //gazel_shared_filtered
+                    //inputs = new float[][][][][]{facepos, left_eye_right_top, right_4d, euler, right_eye_right_top, left_4d};
+                    //iTracker_1_75_24
+                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
+                    //iTracker_1_30_5
+                    //inputs = new float[][][][][]{right_4d, face_grid, left_4d, face_input};
+                    //iTracker_1_16_26
+                    //inputs = new float[][][][][]{right_4d, left_4d, face_grid, face_input};
+                    //iTracker_1_6_37
+                    //inputs = new float[][][][][]{right_4d, left_4d, face_grid, right_4d};
+                    //iTracker_eye_80
+                    //inputs = new float[][][][][]{left_4d, face_grid, face_input, right_4d};
+                    //iTracker_eye_80_filter
+                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
+                    //iTracker_1_8_22
+                    //inputs = new float[][][][][]{face_grid, left_4d, right_4d, face_input};
+                    //iTracker_1_6_37_filter
+                    //inputs = new float[][][][][]{right_4d, face_input, left_4d, face_grid};
+                    //iTracker_1_8_22_filter
+                    //inputs = new float[][][][][]{left_4d, face_input, right_4d, face_grid};
+                    //iTracker_1_16_26_filter
+                    //inputs = new float[][][][][]{face_input, face_grid, left_4d, right_4d};
+                    //iTracker_1_30_5_filter
+                    //inputs = new float[][][][][]{face_grid, face_input, right_4d, left_4d};
+                    //iTracker_1_75_24_filter
+                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
                 }
                 else {
                     inputs = new float[][][][][]{left_4d, right_4d};
@@ -489,6 +545,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 float[][] output = new float[1][2];
                 Map<Integer, Object> outputs = new HashMap<>();
                 outputs.put(0, output);
+                Log.d("LATENCY","Input Wrapped");
                 try {
                     // Clear out Files for Gaze Estimation
                     if(calibration_model_exist){
@@ -509,17 +566,18 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                     //The output x,y will be stored to below variables
                     yhatX = output[0][0];
                     yhatY = output[0][1];
+                    Log.d("LATENCY","Gaze Predicted");
                     if(isCustomDevice) {
                         //TODO
                         Log.d("CROSSDEVICE","yhatX,yhatY: (" + yhatX+","+yhatY+")");
-                        float a = yhatX - (originalDeviceWidthPixel*customDeviceCameraXPos)/originalDeviceWidthCm;
-                        float b = yhatY - (originalDeviceHeightPixel*customDeviceCameraYPos)/originalDeviceHeightCm;
+                        float a = yhatX - (originalDeviceWidthPixel/originalDeviceWidthCm)*originalDeviceCameraXPos;
+                        float b = yhatY - (originalDeviceHeightPixel/originalDeviceHeightCm)*originalDeviceCameraYPos;
                         Log.d("CROSSDEVICE","a,b: (" + a+","+b+")");
-                        float aprime = a * (originalDeviceWidthCm/originalDeviceWidthPixel)*(customDeviceWidthPixel/customDeviceWidthCm);
-                        float bprime = b * (originalDeviceHeightCm/originalDeviceHeightPixel)*(customDeviceHeightPixel/customDeviceHeightCm);
+                        float aprime = a * (originalDeviceWidthCm/originalDeviceWidthPixel);
+                        float bprime = b * (originalDeviceHeightCm/originalDeviceHeightPixel);
                         Log.d("CROSSDEVICE","aprime,bprime: (" + aprime+","+bprime+")");
-                        float resultX = aprime + (customDeviceWidthPixel*originalDeviceCameraXPos)/customDeviceWidthCm;
-                        float resultY = bprime + (customDeviceHeightPixel*originalDeviceCameraYPos)/customDeviceHeightCm;
+                        float resultX = (aprime + customDeviceCameraXPos)*customDeviceWidthPixel/customDeviceWidthCm;
+                        float resultY = (bprime + customDeviceCameraYPos)*customDeviceHeightPixel/customDeviceHeightCm;
                         Log.d("CROSSDEVICE","resultX,resultY: (" + resultX+","+resultY+")");
                         yhatX = resultX;
                         yhatY = resultY;
@@ -562,6 +620,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                         moving_average_Y = moving_average_Y*0.6f+yhatY*0.4f;
                         //Log.d(TAG,"Queue("+moving_average_X+","+moving_average_Y+")");
                     }
+
+                    Log.d("LATENCY","Gaze Filtered");
 
                     /**
                      * Plotting Dots
@@ -917,9 +977,10 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 else {
                     graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, moving_average_X, moving_average_Y, calib_X, calib_Y));
                 }
+
+                Log.d("LATENCY","Gaze Painted");
             }
-
-
+            Log.d("LATENCY","End");
         }
     }
 

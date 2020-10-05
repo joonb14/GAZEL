@@ -93,10 +93,10 @@ public class FaceGraphic extends Graphic {
         if (face == null) {
             return;
         }
-        //Log.d(TAG, "Canvas Width: "+canvas.getWidth()+" Height: "+ canvas.getHeight());
+        Log.d(TAG, "Canvas Width: "+canvas.getWidth()+" Height: "+ canvas.getHeight());
 
         // Draws a circle at the position of the estimated gaze point
-        DisplayMetrics dm = getApplicationContext().getResources().getDisplayMetrics();
+        //DisplayMetrics dm = getApplicationContext().getResources().getDisplayMetrics();
         //Log.d(TAG, "Display Metric w/h: " + width+"/"+height);
         //
         // TODO filter and smooth out values so that gaze point movement looks like smooth pursuit
