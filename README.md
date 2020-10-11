@@ -55,8 +55,8 @@ private final int grid_size = 50; // for eye_grids
 private final int face_grid_size = 25; // for face_grid
 private final int FPS = 30; // for calibration count
 private final int SKIP_FRAME = 10; // for calibration count
-private final int COST = 100; // for SVR
-private final int GAMMA = 20; // for SVR
+private final int COST = 40; // for SVR
+private final int GAMMA = 1; // for SVR
 private final int QUEUE_SIZE = 20; // for moving average
 private final float EYE_OPEN_PROB = 0.0f; //empirical value
 </code></pre>
