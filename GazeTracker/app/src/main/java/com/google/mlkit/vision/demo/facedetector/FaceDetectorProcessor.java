@@ -614,8 +614,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                                 float len_Y = (float) dm.heightPixels/2.0f;
                                 float relx = yhatX-center_mean_X;
                                 float rely = yhatY-center_mean_Y;
-                                float a = relx+len_X;
-                                float b = rely+len_Y;
+                                float a = relx;
+                                float b = rely;
                                 if (relx <=0 && rely <=0 ){
                                     //tlxscale, tlyscale
                                     calib_X = a*tlxscale+len_X;
@@ -864,23 +864,13 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                                 // offset values
                                 center_offset_X = center_mean_X;
                                 center_offset_Y = center_mean_Y;
+                                //translate (cx,cy) to be an origin (0,0)
                                 float cx = dm.widthPixels/2.0f;
                                 float cy = dm.heightPixels/2.0f;
-                                //translate (cx,cy) to be an origin (0,0)
-                                center_offset_X -= cx;
-                                top_left_mean_X -= cx;
-                                top_right_mean_X -= cx;
-                                bottom_left_mean_X -= cx;
-                                bottom_right_mean_X -= cx;
-                                center_offset_Y -= cy;
-                                top_left_mean_Y -= cy;
-                                top_right_mean_Y -= cy;
-                                bottom_left_mean_Y -= cy;
-                                bottom_right_mean_Y -= cy;
                                 //scaling values
                                 tlxscale = Math.abs(cx/(center_offset_X - top_left_mean_X));
                                 tlyscale = Math.abs(cy/(center_offset_Y - top_left_mean_Y));
-                                trxscale = Math.abs(cx/(top_right_mean_X-center_offset_X));
+                                trxscale = Math.abs(cx/(top_right_mean_X - center_offset_X));
                                 tryscale = Math.abs(cy/(center_offset_Y - top_right_mean_Y));
                                 blxscale = Math.abs(cx/(center_offset_X - bottom_left_mean_X));
                                 blyscale = Math.abs(cy/(bottom_left_mean_Y - center_offset_Y));
