@@ -146,7 +146,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private boolean calibration_model_exist = false;
     private String basedir;
 
-    private Queue Xqueue, Yqueue;
+    private boolean moving_average_start = true;
     private float moving_average_X, moving_average_Y;
 
     private float  top_left_mean_X, top_left_mean_Y;
@@ -163,7 +163,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
     private float tlxscale, tlyscale, trxscale, tryscale, blxscale, blyscale, brxscale, bryscale;
 
     private float calib_X, calib_Y;
-    private Queue calib_Xqueue, calib_Yqueue;
+    private boolean calib_moving_average = true;
     private float calib_moving_average_X, calib_moving_average_Y;
     //Bitmap returns mirrored image so needs mirroring matrix at first
     private Matrix matrix;
@@ -190,10 +190,6 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
         };
         matrix = new Matrix();
         matrix.setValues(mirrorY);
-        Xqueue = new Queue(QUEUE_SIZE);
-        Yqueue = new Queue(QUEUE_SIZE);
-        calib_Xqueue = new Queue(QUEUE_SIZE);
-        calib_Yqueue = new Queue(QUEUE_SIZE);
         calibration_button.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -504,38 +500,8 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                  * */
                 Log.d("LATENCY","Input Parced");
                 if(USE_EULER) {
-                    //gazel_shared
-                    //inputs = new float[][][][][]{right_eye_right_top, left_4d, euler, right_4d, facepos, left_eye_right_top};
-                    //gazel_shared_ver2
-                    //inputs = new float[][][][][]{right_eye_right_top, euler, facepos, left_eye_right_top, left_4d, right_4d};
                     //gazel_shared_ver9
                     inputs = new float[][][][][]{facepos, right_4d, left_eye_right_top, euler, right_eye_right_top, left_4d};
-                    //gazel_shared_filtered
-                    //inputs = new float[][][][][]{facepos, left_eye_right_top, right_4d, euler, right_eye_right_top, left_4d};
-                    //iTracker_1_75_24
-                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
-                    //iTracker_1_30_5
-                    //inputs = new float[][][][][]{right_4d, face_grid, left_4d, face_input};
-                    //iTracker_1_16_26
-                    //inputs = new float[][][][][]{right_4d, left_4d, face_grid, face_input};
-                    //iTracker_1_6_37
-                    //inputs = new float[][][][][]{right_4d, left_4d, face_grid, right_4d};
-                    //iTracker_eye_80
-                    //inputs = new float[][][][][]{left_4d, face_grid, face_input, right_4d};
-                    //iTracker_eye_80_filter
-                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
-                    //iTracker_1_8_22
-                    //inputs = new float[][][][][]{face_grid, left_4d, right_4d, face_input};
-                    //iTracker_1_6_37_filter
-                    //inputs = new float[][][][][]{right_4d, face_input, left_4d, face_grid};
-                    //iTracker_1_8_22_filter
-                    //inputs = new float[][][][][]{left_4d, face_input, right_4d, face_grid};
-                    //iTracker_1_16_26_filter
-                    //inputs = new float[][][][][]{face_input, face_grid, left_4d, right_4d};
-                    //iTracker_1_30_5_filter
-                    //inputs = new float[][][][][]{face_grid, face_input, right_4d, left_4d};
-                    //iTracker_1_75_24_filter
-                    //inputs = new float[][][][][]{left_4d, face_input, face_grid, right_4d};
                 }
                 else {
                     inputs = new float[][][][][]{left_4d, right_4d};
@@ -587,25 +553,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                      * MOBED Moving Average Implementation
                      * Using Queue
                      */
-                    if(!Xqueue.isFull()){
-                        Xqueue.queueEnqueue(yhatX);
-                        Yqueue.queueEnqueue(yhatY);
-                        if(Xqueue.isFull()) {
-                            float xSum = 0, ySum = 0;
-                            for (int i = 0; i < Xqueue.capacity; i++) {
-                                xSum += Xqueue.queue[i];
-                                ySum += Yqueue.queue[i];
-                            }
-                            moving_average_X = xSum / (float) QUEUE_SIZE;
-                            moving_average_Y = ySum / (float) QUEUE_SIZE;
-                        }
+                    if(moving_average_start){
+                        moving_average_X = yhatX;
+                        moving_average_Y = yhatY;
+                        moving_average_start = false;
                     }
                     else {
-                        Xqueue.queueDequeue();
-                        Yqueue.queueDequeue();
-                        Xqueue.queueEnqueue(yhatX);
-                        Yqueue.queueEnqueue(yhatY);
-
                         double distance = Math.sqrt(Math.pow(moving_average_X-yhatX,2) + Math.pow(moving_average_Y-yhatY,2));
                         if(distance > SACCADE_THRESHOLD) {
                             isSaccade = true;
@@ -683,26 +636,12 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                                     calib_X = a*brxscale+len_X;
                                     calib_Y = b*bryscale+len_Y;
                                 }
-                                if(!calib_Xqueue.isFull()){
-                                    calib_Xqueue.queueEnqueue(calib_X);
-                                    calib_Yqueue.queueEnqueue(calib_Y);
-                                    if(calib_Xqueue.isFull()) {
-                                        float xSum = 0, ySum = 0;
-                                        for (int i = 0; i < calib_Xqueue.capacity; i++) {
-                                            xSum += calib_Xqueue.queue[i];
-                                            ySum += calib_Yqueue.queue[i];
-                                        }
-                                        calib_moving_average_X = xSum / (float) QUEUE_SIZE;
-                                        calib_moving_average_Y = ySum / (float) QUEUE_SIZE;
-                                    }
+                                if(calib_moving_average){
+                                    calib_moving_average_X = calib_X;
+                                    calib_moving_average_Y = calib_Y;
+                                    calib_moving_average = false;
                                 }
                                 else {
-                                    calib_Xqueue.queueDequeue();
-                                    calib_Yqueue.queueDequeue();
-                                    calib_Xqueue.queueEnqueue(calib_X);
-                                    calib_Yqueue.queueEnqueue(calib_Y);
-
-
                                     calib_moving_average_X = calib_moving_average_X*0.6f+calib_X*0.4f;
                                     calib_moving_average_Y = calib_moving_average_Y*0.6f+calib_Y*0.4f;
                                     //Log.d(TAG,"Queue("+moving_average_X+","+moving_average_Y+")");
@@ -971,7 +910,7 @@ public class FaceDetectorProcessor extends VisionProcessorBase<List<Face>> {
                 calibration_point.setVisibility(View.INVISIBLE);
                 calibration_button.setVisibility(View.VISIBLE);
                 calibration_button.setText(R.string.calibration);
-                if(calib_Xqueue.isFull()) {
+                if(!calib_moving_average) {
                     graphicOverlay.add(new FaceGraphic(graphicOverlay, face, yhatX, yhatY, calib_X, calib_Y, calib_moving_average_X, calib_moving_average_Y));
                 }
                 else {

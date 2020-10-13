@@ -211,21 +211,6 @@ public final class LivePreviewActivity extends AppCompatActivity
                                             /**
                                              * TabS6
                                              * */
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/gazel_shared.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/gazel_shared_ver2.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/gazel_shared_filtered.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_75_24.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_30_5.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_16_26.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_6_37.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_eye_80.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_eye_80_filter.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_8_22.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_6_37_filter.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_8_22_filter.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_16_26_filter.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_30_5_filter.tflite");
-                                            //InputStream inputStream = getAssets().open("custom_models/eval/iTracker_1_75_24_filter.tflite");
                                             InputStream inputStream = getAssets().open("custom_models/eval/gazel_shared_ver9.tflite");
 
                                             byte[] model = new byte[inputStream.available()];
