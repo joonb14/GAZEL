@@ -16,7 +16,7 @@ Green dot represent "Calibrated Raw Output"<br>
 Trained with Galaxy Tab S6 data ,tested on Galaxy Tab S6<br>
 [![TabS6](https://img.youtube.com/vi/rhO5kjTn0Ts/0.jpg)](https://www.youtube.com/watch?v=rhO5kjTn0Ts)<br>
 Trained with Galaxy Tab S6 data, tested and calibrated on Galaxy S9+<br>
-[![S9+](https://img.youtube.com/vi/Q9bBMK_hWq4/0.jpg)](https://www.youtube.com/watch?v=Q9bBMK_hWq4)<br>
+[![S9+](https://img.youtube.com/vi/iwPjHlGeRpw/0.jpg)](https://youtu.be/iwPjHlGeRpw)<br>
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
 Also deleted most of the source code that is not needed<br>
