@@ -1,5 +1,7 @@
 # GAZEL
-This work is based on Google's ML kit Sample(2020, June Version)<br>
+This work is official implementation of GAZEL: Runtime Gaze Tracking for Smartphones
+![overview](https://user-images.githubusercontent.com/30307587/109145148-71f31f80-77a5-11eb-94a7-34a47a1f19d5.png)
+This work is heavily based on Google's Firebase ML kit Sample(2020, June Version)<br>
 https://github.com/googlesamples/mlkit/tree/master/android/vision-quickstart <br>
 inspired by: <a href="https://gazecapture.csail.mit.edu/">Eye Tracking for Everyone(2016 CVPR)</a><br><br>
 Collaborators: <br>
