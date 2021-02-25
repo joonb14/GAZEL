@@ -8,6 +8,7 @@ Collaborators: <br>
 <a href="https://github.com/oleeyoung520?tab=repositories">oleeyoung520</a> Email: 2015147520@yonsei.ac.kr <br>
 <a href="https://github.com/Yeeun55">Yeeun55</a> Email: joyce9559@naver.com <br>
 <a href="https://github.com/yeokyeong46">yeokyeong46</a> Email: yeokyeong46@gmail.com <br>
+
 ## Sample Videos
 This work is based on Galaxy Tab S6. <br>
 We trained model with data collected using  <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a><br>
@@ -22,26 +23,31 @@ Trained with Galaxy Tab S6 data, tested and calibrated on Galaxy S9+<br>
 ### Summary
 I mainly changed <b>FaceDetectorProcessor.java, LivePreviewActivity.java</b> and <b>FaceGraphic.java</b> <br>
 Also deleted most of the source code that is not needed<br>
-Added custom TensorFlow Lite model which is used for Gaze Estimation<br>
-## Details
-### Gaze Estimation Model
-![model](https://user-images.githubusercontent.com/30307587/109145286-a6ff7200-77a5-11eb-86ff-41925981af10.png)
-Model is stored in asset folder. Created with Keras, converted to tflite.<br>
-named <b>"checkpoint/illum_facepos.tflite"</b> model has best accuracy<br>
-You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
+Added a guide to load and use custom TensorFlow Lite model which is used for Gaze Estimation<br>
 
-### Worked on...
-MobiGaze uses <b>Personalized model</b>. This example is based on my Data(Wearing glasses). So would not work well on other person.(Have already tested...)<br>
+## Details
+#### Gaze Estimation Model
+<img src="https://user-images.githubusercontent.com/30307587/109145286-a6ff7200-77a5-11eb-86ff-41925981af10.png" alt="model" style="width:800px;"/>
+
+Model should be stored in asset folder. I recommend to create model with Keras, then converted it to the TFlite model.<br>
+You can check the output also on Logcat. <b>TAG is "MOBED_GazePoint"</b><br>
+<img src="https://user-images.githubusercontent.com/30307587/109152350-b8994780-77ae-11eb-882b-0ef26e723d86.png" alt="logcat"/>
+
+#### Before we start...
+GAZEL uses <b>Personalized model</b>. This model is heavily dependent on my facial appearances (Wearing glasses & in Lab environment). So would not work well on other person.(Have already tested...)<br>
+So, I decided to exclude the .tflite model and provide training source codes and data collecting application for you to follow.<br>
+The Keras model training & TensorFlow Lite conversion Code is provided in <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.<br>
+
+#### For the Calibration
 We used  5 points calibration with translation, and rescaling.<br>
 5 points are TopLeft, TopRight, BottomLeft, BottomRight, and Center<br>
-We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for each x and y coordinate.<br>
-However the problem is... I cannot get the right cost and gamma for SVR... and it seems to need much more calibration points than 5. <br>
-So we are using translation, and rescaling as default calibration method.<br>
-Keras model training & conversion Code is provided in <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.<br>
+We also tried to provide SVR calibration. However, multi output SVR doesn't exist in android. So we are using 2 regressors(with android <a href="https://github.com/yctung/AndroidLibSVM">libsvm</a>) for each x and y coordinate (The calibration experiments on the paper are conducted on the "server" with scikit-learn, not on the "smartphones"). This does not work as well as the linear calibration, so we recommend to use linear calibration.<br>
+
 
 ## TFLite Configuration<a id="tflite_config"></a>
-If you want to use custom TFLite model with our MobiGaze Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
-We used 1-channel bitmap for enhancing gaze estimation accuracy, but like other papers which use 3-channel RGB images as input, we provide 3-channel image mode. You can change the mode with THREE-CHANNEL flag. 
+If you want to use custom TFLite model with our GAZEL Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
+We used 1-channel bitmap for enhancing gaze estimation accuracy, but like other papers which use 3-channel RGB images as input, we provide 3-channel image mode. You can change the mode with THREE-CHANNEL flag. We also provide various options for you to test your model with various model inputs, so try to create gaze estimation model with various inputs!
+
 <pre><code>private final boolean USE_EULER = true; // true: use euler x,y,z as input
 private final boolean USE_FACE = false; // true: use face x,y,z as input
 private final boolean USE_EYEGRID = false; // true: use eye_grid as input
@@ -62,13 +68,13 @@ private final int GAMMA = 1; // for SVR
 private final int QUEUE_SIZE = 20; // for moving average
 private final float EYE_OPEN_PROB = 0.0f; //empirical value
 </code></pre>
-To use custom TFLite model, you must change these values first.
-In <b>LivePreviewActivity.java</b>, change
 
-<pre><code>InputStream inputStream = getAssets().open("[dir_to_custom_models]/[model_name].tflite");</code></pre>
+In case you put your TFLite model in the <b>"GAZEL/GazeTracker/app/src/main/assets/custom_models/eval/"</b> directory, you must change the below line in <b>LivePreviewActivity.java</b>, change
+
+<pre><code>InputStream inputStream = getAssets().open("custom_models/eval/[your_model_name]].tflite");</code></pre>
 
 then follow the [issues](#issues)
-### Issues
+#### Issues
 TensorFlow Lite Conversion. Before you load your tflite model, you must check the input details to make sure input order is correct.<br>
 In case you are using python interpreter,
 
@@ -111,12 +117,12 @@ Then reorder your inputs in <b>FaceDetectorProcessor.java</b> <a id="issues"></a
 This work is based on Tablet devices. So if you want to use this framework on Smartphones, you need to follow some instructions.<br>
 
 * First, you need Tablet device for training base Gaze Estimation CNN Model.
-* Second, you need to collect <b>"personal"</b> Ground Truth Gaze Data with <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.
+* Second, you need to collect <b>"Ground Truth Gaze Data"</b>  with <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.
 * Third, you need to train your Gaze Estimation CNN Model with <a href="">provided python code<a/>.
 * Fourth, you need to follow [TFLite Configuration](#tflite_config)
 * Fifth, follow the instructions below
 Change the configuration options below(in <b>FaceDetectorProcessor.java</b> ) with your Target device spec.
-<pre><code>private final boolean isCustomDevice = false;
+<pre><code>private final boolean isCustomDevice = true;
 //custom device
 private final float customDeviceWidthPixel = 1440.0f;
 private final float customDeviceWidthCm = 7.0f;
@@ -132,9 +138,14 @@ private final float originalDeviceHeightCm = 22.5f;
 private final float originalDeviceCameraXPos = 7.1f; // in cm | at Android coordinate system where use top left corner as (0,0)
 private final float originalDeviceCameraYPos = -0.5f; // in cm | at Android coordinate system where use top left corner as (0,0)
 </code></pre>
+
 set the <b>isCustomDevice</b> flag to true, then change all of the <b>customDevice[option]</b> values
 
-* Lastly, run the MobiGaze application, and you must click <b>"START CALIB"</b> button to start calibration and use it as Gaze Tracker.
+* Lastly, run the GAZEL application, and you must click <b>"START CALIB"</b> button to start calibration and use it as Gaze Tracker.
 
-### Tips
+#### Tips
 Collect data as much as you can before training your model. Recommend you to use different head position with different light conditions. 
+
+## Discussion
+It is well known knowledge to use massive image dataset to train feature extraction layers then only train fully connected layers for targeted environment. I as a mobile system developer however wanted to try using mobile embedded sensors to improve gaze estimation accuracy. That's why I tried to build up new application using collected sensor outputs as well as front camera frames. (And that's why I didn't use the massive image dataset for training).
+Also I believe our work is the first open source smartphone gaze tracking framework. I hope this little proof of concept framework would help your research. Thank you.
