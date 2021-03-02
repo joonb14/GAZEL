@@ -48,16 +48,18 @@ We also tried to provide SVR calibration. However, multi output SVR doesn't exis
 If you want to use custom TFLite model with our GAZEL Framework. First check  configuration options below(in <b>FaceDetectorProcessor.java</b> ). We provide Face bitmap, Left/Right Eye Grids, Face Grid.
 We used 1-channel bitmap for enhancing gaze estimation accuracy, but like other papers which use 3-channel RGB images as input, we provide 3-channel image mode. You can change the mode with THREE-CHANNEL flag. We also provide various options for you to test your model with various model inputs, so try to create gaze estimation model with various inputs!
 
-<pre><code>private final boolean USE_EULER = true; // true: use euler x,y,z as input
+```java
+private final boolean USE_EULER = true; // true: use euler x,y,z as input
 private final boolean USE_FACE = false; // true: use face x,y,z as input
 private final boolean USE_EYEGRID = false; // true: use eye_grid as input
 private final boolean USE_FACEGRID = true; // true: use face_grid as input
 private final boolean THREE_CHANNEL = false; // false for Black and White image, true for RGB image
 private final boolean calibration_mode_SVR = false; // false for translation & rescale. true for SVR
 private final boolean CORNER_CALIBRATION = false; // false for translation & rescale with center, true for only 4 corners
-</code></pre>
+```
 Above configuration flags are about  switching modes, now below configuration values are specific values for initializing modes.
-<pre><code>private final double SACCADE_THRESHOLD = 300; // distance for classifying FIXATION and SACCADE
+```java
+private final double SACCADE_THRESHOLD = 300; // distance for classifying FIXATION and SACCADE
 private final int resolution = 64; // for eye and face
 private final int grid_size = 50; // for eye_grids
 private final int face_grid_size = 25; // for face_grid
@@ -67,7 +69,7 @@ private final int COST = 40; // for SVR
 private final int GAMMA = 1; // for SVR
 private final int QUEUE_SIZE = 20; // for moving average
 private final float EYE_OPEN_PROB = 0.0f; //empirical value
-</code></pre>
+```
 
 In case you put your TFLite model in the <b>"GAZEL/GazeTracker/app/src/main/assets/custom_models/eval/"</b> directory, you must change the below line in <b>LivePreviewActivity.java</b>, change
 
@@ -78,13 +80,15 @@ then follow the [issues](#issues)
 TensorFlow Lite Conversion. Before you load your tflite model, you must check the input details to make sure input order is correct.<br>
 In case you are using python interpreter,
 
-<pre><code>import tensorflow as tf
+```python
+import tensorflow as tf
 tflite = tf.lite.Interpreter(model_path="path/to/model.tflite")
 tflite.get_input_details()
-</code></pre>
+```
 example output will be
 
-<pre><code>[{'name': 'left_eye',
+```
+[{'name': 'left_eye',
   'index': 4,
   'shape': array([ 1, 64, 64,  1], dtype=int32),
   'dtype': numpy.float32,
@@ -109,10 +113,11 @@ example output will be
   'shape': array([ 1, 25, 25,  1], dtype=int32),
   'dtype': numpy.float32,
   'quantization': (0.0, 0)}]
-</code></pre>
+```
 Then reorder your inputs in <b>FaceDetectorProcessor.java</b> <a id="issues"></a>
-<pre><code>inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid}; // make sure the order is correct
-</code></pre>
+```java
+inputs = new float[][][][][]{left_4d, right_4d, euler, facepos, face_grid}; // make sure the order is correct
+```
 ## Custom Device Configuration
 This work is based on Tablet devices. So if you want to use this framework on Smartphones, you need to follow some instructions.<br>
 
@@ -122,7 +127,8 @@ This work is based on Tablet devices. So if you want to use this framework on Sm
 * Fourth, you need to follow [TFLite Configuration](#tflite_config)
 * Fifth, follow the instructions below
 Change the configuration options below(in <b>FaceDetectorProcessor.java</b> ) with your Target device spec.
-<pre><code>private final boolean isCustomDevice = true;
+```java
+private final boolean isCustomDevice = true;
 //custom device
 private final float customDeviceWidthPixel = 1440.0f;
 private final float customDeviceWidthCm = 7.0f;
@@ -137,7 +143,7 @@ private final float originalDeviceHeightPixel = 2560.0f;
 private final float originalDeviceHeightCm = 22.5f;
 private final float originalDeviceCameraXPos = 7.1f; // in cm | at Android coordinate system where use top left corner as (0,0)
 private final float originalDeviceCameraYPos = -0.5f; // in cm | at Android coordinate system where use top left corner as (0,0)
-</code></pre>
+```
 
 set the <b>isCustomDevice</b> flag to true, then change all of the <b>customDevice[option]</b> values
 
