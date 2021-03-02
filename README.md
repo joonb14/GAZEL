@@ -73,7 +73,9 @@ private final float EYE_OPEN_PROB = 0.0f; //empirical value
 
 In case you put your TFLite model in the <b>"GAZEL/GazeTracker/app/src/main/assets/custom_models/eval/"</b> directory, you must change the below line in <b>LivePreviewActivity.java</b>, change
 
-<pre><code>InputStream inputStream = getAssets().open("custom_models/eval/[your_model_name]].tflite");</code></pre>
+```java
+InputStream inputStream = getAssets().open("custom_models/eval/[your_model_name]].tflite");
+```
 
 then follow the [issues](#issues)
 #### Issues
