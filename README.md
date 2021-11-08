@@ -125,7 +125,7 @@ This work is based on Tablet devices. So if you want to use this framework on Sm
 
 * First, you need Tablet device for training base Gaze Estimation CNN Model.
 * Second, you need to collect <b>"Ground Truth Gaze Data"</b>  with <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton.git"> MLKitGazeDataCollectingButton</a>.
-* Third, you need to train your Gaze Estimation CNN Model with <a href="">provided python code<a/>.
+* Third, you need to train your Gaze Estimation CNN Model with <a href="https://github.com/joonb14/MLKitGazeDataCollectingButton/blob/master/GAZEL.ipynb">provided python code<a/>.
 * Fourth, you need to follow [TFLite Configuration](#tflite_config)
 * Fifth, follow the instructions below
 Change the configuration options below(in <b>FaceDetectorProcessor.java</b> ) with your Target device spec.
